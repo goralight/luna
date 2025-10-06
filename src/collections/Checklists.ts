@@ -1,4 +1,3 @@
-import { ArrayRowLabel } from '@/app/(payload)/ArrayRowLabel'
 import { CollectionConfig } from 'payload'
 
 export const Checklists: CollectionConfig = {
