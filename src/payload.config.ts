@@ -1,4 +1,3 @@
-// storage-adapter-import-placeholder
 import { mongooseAdapter } from '@payloadcms/db-mongodb'
 import { payloadCloudPlugin } from '@payloadcms/payload-cloud'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
@@ -12,6 +11,7 @@ import { Media } from './collections/Media'
 import { Checklists } from './collections/Checklists'
 import { ChecklistGroups } from './collections/ChecklistGroups'
 import { s3Storage } from '@payloadcms/storage-s3'
+import { searchPlugin } from '@payloadcms/plugin-search'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -35,6 +35,14 @@ export default buildConfig({
   sharp,
   plugins: [
     payloadCloudPlugin(),
+    searchPlugin({
+      collections: ['checklists', 'checklist-groups', 'users'],
+      defaultPriorities: {
+        checklists: 10,
+        'checklist-groups': 20,
+        users: 30,
+      },
+    }),
     s3Storage({
       collections: {
         media: true,
@@ -47,9 +55,7 @@ export default buildConfig({
           secretAccessKey: process.env.S3_SECRET_ACCESS_KEY || '',
         },
         region: process.env.S3_REGION || '',
-        // ... Other S3 configuration
       },
     }),
-    // storage-adapter-placeholder
   ],
 })

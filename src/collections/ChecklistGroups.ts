@@ -1,8 +1,8 @@
-// src/collections/ChecklistGroups.ts
 import { CollectionConfig } from 'payload'
 
 export const ChecklistGroups: CollectionConfig = {
   slug: 'checklist-groups',
+  folders: true,
   admin: {
     useAsTitle: 'title',
     group: 'Checklists'

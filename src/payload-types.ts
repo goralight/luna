@@ -71,16 +71,24 @@ export interface Config {
     media: Media;
     checklists: Checklist;
     'checklist-groups': ChecklistGroup;
+    search: Search;
+    'payload-folders': FolderInterface;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
     'payload-migrations': PayloadMigration;
   };
-  collectionsJoins: {};
+  collectionsJoins: {
+    'payload-folders': {
+      documentsAndFolders: 'payload-folders' | 'checklist-groups';
+    };
+  };
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
     checklists: ChecklistsSelect<false> | ChecklistsSelect<true>;
     'checklist-groups': ChecklistGroupsSelect<false> | ChecklistGroupsSelect<true>;
+    search: SearchSelect<false> | SearchSelect<true>;
+    'payload-folders': PayloadFoldersSelect<false> | PayloadFoldersSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
     'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
@@ -211,6 +219,59 @@ export interface ChecklistGroup {
   id: string;
   title: string;
   checklists?: (string | Checklist)[] | null;
+  folder?: (string | null) | FolderInterface;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-folders".
+ */
+export interface FolderInterface {
+  id: string;
+  name: string;
+  folder?: (string | null) | FolderInterface;
+  documentsAndFolders?: {
+    docs?: (
+      | {
+          relationTo?: 'payload-folders';
+          value: string | FolderInterface;
+        }
+      | {
+          relationTo?: 'checklist-groups';
+          value: string | ChecklistGroup;
+        }
+    )[];
+    hasNextPage?: boolean;
+    totalDocs?: number;
+  };
+  folderType?: 'checklist-groups'[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This is a collection of automatically created search results. These results are used by the global site search and will be updated automatically as documents in the CMS are created or updated.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "search".
+ */
+export interface Search {
+  id: string;
+  title?: string | null;
+  priority?: number | null;
+  doc:
+    | {
+        relationTo: 'checklists';
+        value: string | Checklist;
+      }
+    | {
+        relationTo: 'checklist-groups';
+        value: string | ChecklistGroup;
+      }
+    | {
+        relationTo: 'users';
+        value: string | User;
+      };
   updatedAt: string;
   createdAt: string;
 }
@@ -236,6 +297,14 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'checklist-groups';
         value: string | ChecklistGroup;
+      } | null)
+    | ({
+        relationTo: 'search';
+        value: string | Search;
+      } | null)
+    | ({
+        relationTo: 'payload-folders';
+        value: string | FolderInterface;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -376,6 +445,30 @@ export interface ChecklistsSelect<T extends boolean = true> {
 export interface ChecklistGroupsSelect<T extends boolean = true> {
   title?: T;
   checklists?: T;
+  folder?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "search_select".
+ */
+export interface SearchSelect<T extends boolean = true> {
+  title?: T;
+  priority?: T;
+  doc?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-folders_select".
+ */
+export interface PayloadFoldersSelect<T extends boolean = true> {
+  name?: T;
+  folder?: T;
+  documentsAndFolders?: T;
+  folderType?: T;
   updatedAt?: T;
   createdAt?: T;
 }
