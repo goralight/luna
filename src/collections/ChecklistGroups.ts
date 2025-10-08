@@ -2,22 +2,25 @@ import { CollectionConfig } from 'payload'
 
 export const ChecklistGroups: CollectionConfig = {
   slug: 'checklist-groups',
+  access: {
+    read: () => true,
+  },
   folders: true,
   admin: {
     useAsTitle: 'title',
-    group: 'Checklists'
+    group: 'Checklists',
   },
   fields: [
     {
       name: 'title',
       type: 'text',
-      required: true
+      required: true,
     },
     {
       name: 'checklists',
       type: 'relationship',
       relationTo: 'checklists', // references the 'checklists' collection
-      hasMany: true // allows multiple checklists in the array
-    }
-  ]
+      hasMany: true, // allows multiple checklists in the array
+    },
+  ],
 }
