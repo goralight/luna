@@ -33,8 +33,20 @@ export default buildConfig({
     url: process.env.DATABASE_URI || '',
   }),
   sharp,
-  cors: ['http://localhost:3000', 'https://nox.goralight.com', 'https://goralight.com'],
-  csrf: ['http://localhost:3000', 'https://nox.goralight.com', 'https://goralight.com'],
+  cors: [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://luna.goralight.com',
+    'https://nox.goralight.com',
+    'https://goralight.com',
+  ],
+  csrf: [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://luna.goralight.com',
+    'https://nox.goralight.com',
+    'https://goralight.com',
+  ],
   plugins: [
     payloadCloudPlugin(),
     searchPlugin({
