@@ -32,7 +32,8 @@
     "payload": "3.59.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "sharp": "0.34.2"
+    "sharp": "0.34.2",
+    "slugify": "^1.6.6"
   },
   "devDependencies": {
     "@playwright/test": "1.54.1",

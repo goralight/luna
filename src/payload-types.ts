@@ -218,6 +218,8 @@ export interface Checklist {
 export interface ChecklistGroup {
   id: string;
   title: string;
+  slug: string;
+  description?: string | null;
   checklists?: (string | Checklist)[] | null;
   folder?: (string | null) | FolderInterface;
   updatedAt: string;
@@ -444,6 +446,8 @@ export interface ChecklistsSelect<T extends boolean = true> {
  */
 export interface ChecklistGroupsSelect<T extends boolean = true> {
   title?: T;
+  slug?: T;
+  description?: T;
   checklists?: T;
   folder?: T;
   updatedAt?: T;

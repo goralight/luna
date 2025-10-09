@@ -21,7 +21,7 @@ export default buildConfig({
     user: Users.slug,
     importMap: {
       baseDir: path.resolve(dirname),
-    },
+    }
   },
   collections: [Users, Media, Checklists, ChecklistGroups],
   editor: lexicalEditor(),
