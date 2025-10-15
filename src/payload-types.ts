@@ -71,6 +71,7 @@ export interface Config {
     media: Media;
     checklists: Checklist;
     'checklist-groups': ChecklistGroup;
+    'fa-icons': FaIcon;
     search: Search;
     'payload-folders': FolderInterface;
     'payload-locked-documents': PayloadLockedDocument;
@@ -87,6 +88,7 @@ export interface Config {
     media: MediaSelect<false> | MediaSelect<true>;
     checklists: ChecklistsSelect<false> | ChecklistsSelect<true>;
     'checklist-groups': ChecklistGroupsSelect<false> | ChecklistGroupsSelect<true>;
+    'fa-icons': FaIconsSelect<false> | FaIconsSelect<true>;
     search: SearchSelect<false> | SearchSelect<true>;
     'payload-folders': PayloadFoldersSelect<false> | PayloadFoldersSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -202,12 +204,35 @@ export interface Media {
 export interface Checklist {
   id: string;
   title: string;
+  /**
+   * Pick a Font Awesome icon
+   */
+  icon?: (string | null) | FaIcon;
   items?:
     | {
         text: string;
         id?: string | null;
       }[]
     | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "fa-icons".
+ */
+export interface FaIcon {
+  id: string;
+  label: string;
+  prefix: 'fas' | 'far' | 'fab';
+  /**
+   * e.g. plane, hotel, car, user, calendar. | https://fontawesome.com/search?f=classic&s=solid&ic=free&o=r
+   */
+  name: string;
+  /**
+   * auto-generated: e.g. fa-solid fa-plane
+   */
+  className?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -220,6 +245,10 @@ export interface ChecklistGroup {
   title: string;
   slug: string;
   description?: string | null;
+  /**
+   * Pick a Font Awesome icon
+   */
+  icon?: (string | null) | FaIcon;
   checklists?: (string | Checklist)[] | null;
   folder?: (string | null) | FolderInterface;
   updatedAt: string;
@@ -299,6 +328,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'checklist-groups';
         value: string | ChecklistGroup;
+      } | null)
+    | ({
+        relationTo: 'fa-icons';
+        value: string | FaIcon;
       } | null)
     | ({
         relationTo: 'search';
@@ -431,6 +464,7 @@ export interface MediaSelect<T extends boolean = true> {
  */
 export interface ChecklistsSelect<T extends boolean = true> {
   title?: T;
+  icon?: T;
   items?:
     | T
     | {
@@ -448,8 +482,21 @@ export interface ChecklistGroupsSelect<T extends boolean = true> {
   title?: T;
   slug?: T;
   description?: T;
+  icon?: T;
   checklists?: T;
   folder?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "fa-icons_select".
+ */
+export interface FaIconsSelect<T extends boolean = true> {
+  label?: T;
+  prefix?: T;
+  name?: T;
+  className?: T;
   updatedAt?: T;
   createdAt?: T;
 }
