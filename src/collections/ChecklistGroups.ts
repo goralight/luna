@@ -32,7 +32,6 @@ export const ChecklistGroups: CollectionConfig = {
       type: 'relationship',
       relationTo: 'fa-icons',
       required: false,
-      maxDepth: 1,
       admin: {
         description: 'Pick a Font Awesome icon'
       }
