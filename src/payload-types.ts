@@ -72,6 +72,7 @@ export interface Config {
     checklists: Checklist;
     'checklist-groups': ChecklistGroup;
     'fa-icons': FaIcon;
+    'day-entries': DayEntry;
     search: Search;
     'payload-folders': FolderInterface;
     'payload-locked-documents': PayloadLockedDocument;
@@ -89,6 +90,7 @@ export interface Config {
     checklists: ChecklistsSelect<false> | ChecklistsSelect<true>;
     'checklist-groups': ChecklistGroupsSelect<false> | ChecklistGroupsSelect<true>;
     'fa-icons': FaIconsSelect<false> | FaIconsSelect<true>;
+    'day-entries': DayEntriesSelect<false> | DayEntriesSelect<true>;
     search: SearchSelect<false> | SearchSelect<true>;
     'payload-folders': PayloadFoldersSelect<false> | PayloadFoldersSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -281,6 +283,22 @@ export interface FolderInterface {
   createdAt: string;
 }
 /**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "day-entries".
+ */
+export interface DayEntry {
+  id: string;
+  user: string | User;
+  date: string;
+  moodRating: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10';
+  weight: number;
+  minutesPainted?: number | null;
+  dives?: number | null;
+  note?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This is a collection of automatically created search results. These results are used by the global site search and will be updated automatically as documents in the CMS are created or updated.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -332,6 +350,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'fa-icons';
         value: string | FaIcon;
+      } | null)
+    | ({
+        relationTo: 'day-entries';
+        value: string | DayEntry;
       } | null)
     | ({
         relationTo: 'search';
@@ -497,6 +519,21 @@ export interface FaIconsSelect<T extends boolean = true> {
   prefix?: T;
   name?: T;
   className?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "day-entries_select".
+ */
+export interface DayEntriesSelect<T extends boolean = true> {
+  user?: T;
+  date?: T;
+  moodRating?: T;
+  weight?: T;
+  minutesPainted?: T;
+  dives?: T;
+  note?: T;
   updatedAt?: T;
   createdAt?: T;
 }

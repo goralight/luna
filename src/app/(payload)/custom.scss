@@ -1,0 +1,23 @@
+/* CalendarListView styles */
+.calendarListContainer {
+  padding: 24px;
+}
+
+.calendarHeading {
+  margin-bottom: 16px;
+}
+
+.calendarHelpText {
+  margin-top: 12px;
+  color: #666;
+}
+
+/* Highlight days with an existing Day Entry */
+.rdp-day.hasEntry {
+  background: #141414;
+  border: 1px solid #3b3b3b;
+}
+
+.rdp-day.hasEntry:hover {
+  background: #3b3b3b;
+}
