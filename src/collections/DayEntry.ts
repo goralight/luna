@@ -3,6 +3,9 @@ import CalendarListView from '@/admin/CalendarListView'
 
 export const DayEntries: CollectionConfig = {
   slug: 'day-entries',
+  access: {
+    read: () => true,
+  },
   admin: {
     useAsTitle: 'date',
     components: {
