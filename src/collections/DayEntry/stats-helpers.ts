@@ -168,6 +168,21 @@ export async function fetchAllNumericValues(
   return values
 }
 
+export function calculateMedian(values: number[]): number | null {
+  if (values.length === 0) {
+    return null
+  }
+
+  const sorted = [...values].sort((a, b) => a - b)
+  const count = sorted.length
+
+  if (count % 2 === 1) {
+    return sorted[Math.floor(count / 2)]
+  } else {
+    return (sorted[count / 2 - 1] + sorted[count / 2]) / 2
+  }
+}
+
 export function calculateConsistencyStats(values: number[]): {
   standardDeviation: number | null
   variance: number | null

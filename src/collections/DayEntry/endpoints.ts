@@ -3,6 +3,7 @@ import {
   aggregateFieldDistribution,
   aggregateFieldValues,
   calculateConsistencyStats,
+  calculateMedian,
   createCachedResponse,
   fetchAllNumericValues,
   fillDistributionGaps,
@@ -29,6 +30,21 @@ export const dayEntryEndpoints: Endpoint[] = [
       const count = values.length
       const sum = values.reduce((acc, val) => acc + val, 0)
       const average = count > 0 ? sum / count : null
+      const median = calculateMedian(values)
+
+      // Calculate min and max
+      let minmax: { min: number | null; max: number | null }
+      if (count > 0) {
+        let min = values[0]
+        let max = values[0]
+        for (let i = 1; i < values.length; i++) {
+          if (values[i] < min) min = values[i]
+          if (values[i] > max) max = values[i]
+        }
+        minmax = { min, max }
+      } else {
+        minmax = { min: null, max: null }
+      }
 
       // Compute distribution for moodRating and dives
       let distribution: Record<string, number> | undefined = undefined
@@ -53,8 +69,10 @@ export const dayEntryEndpoints: Endpoint[] = [
         end: end!,
         count,
         average,
+        median,
         distribution,
         consistency,
+        minmax,
       }
 
       return createCachedResponse(response)
@@ -99,14 +117,21 @@ export const dayEntryEndpoints: Endpoint[] = [
         return validationError
       }
 
-      const { sum, count } = await aggregateFieldValues(
-        req.payload,
-        start!,
-        end!,
-        field as StatField,
+      // Get all numeric values for median calculation
+      const values = await fetchAllNumericValues(req.payload, start!, end!, field as StatField)
+
+      // Aggregate sum and count for average
+      const { sum, count } = values.reduce(
+        (acc, val) => {
+          acc.sum += val
+          acc.count += 1
+          return acc
+        },
+        { sum: 0, count: 0 },
       )
 
       const average = count > 0 ? sum / count : null
+      const median = calculateMedian(values)
 
       const response: StatsResponse = {
         field: field!,
@@ -114,6 +139,7 @@ export const dayEntryEndpoints: Endpoint[] = [
         end: end!,
         count,
         average,
+        median,
       }
 
       return createCachedResponse(response)

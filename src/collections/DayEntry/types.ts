@@ -16,6 +16,7 @@ export interface StatsResponse {
   end: string
   count: number
   average: number | null
+  median: number | null
 }
 
 export interface DistributionResponse {
