@@ -13,7 +13,7 @@ import { ChecklistGroups } from './collections/ChecklistGroups'
 import { s3Storage } from '@payloadcms/storage-s3'
 import { searchPlugin } from '@payloadcms/plugin-search'
 import { FaIcons } from './collections/faIcons'
-import { DayEntries } from './collections/DayEntry'
+import { DayEntries } from './collections/DayEntry/index'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -25,14 +25,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [
-    Users,
-    Media,
-    Checklists,
-    ChecklistGroups,
-    FaIcons,
-    DayEntries,
-  ],
+  collections: [Users, Media, Checklists, ChecklistGroups, FaIcons, DayEntries],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
