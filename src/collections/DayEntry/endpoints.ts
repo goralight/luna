@@ -1,14 +1,19 @@
 import { Endpoint } from 'payload'
 import {
   aggregateFieldDistribution,
-  aggregateFieldValues,
   calculateConsistencyStats,
   calculateMedian,
   createCachedResponse,
   fetchAllNumericValues,
   fillDistributionGaps,
   validateStatsParams,
+  buildDailyValueMap,
+  listAllDatesInRange,
+  getWeekWindows,
+  getMonthlyWindows,
+  formatAverage,
 } from './stats-helpers'
+import { toUTCDate } from './stats-helpers'
 import { DistributionResponse, StatField, StatsQueryParams, StatsResponse } from './types'
 
 export const dayEntryEndpoints: Endpoint[] = [
@@ -29,7 +34,7 @@ export const dayEntryEndpoints: Endpoint[] = [
       // Calculate everything from the values array
       const count = values.length
       const sum = values.reduce((acc, val) => acc + val, 0)
-      const average = count > 0 ? sum / count : null
+      const average = formatAverage(count > 0 ? sum / count : null, field as StatField)
       const median = calculateMedian(values)
 
       // Calculate min and max
@@ -76,6 +81,104 @@ export const dayEntryEndpoints: Endpoint[] = [
       }
 
       return createCachedResponse(response)
+    },
+  },
+  {
+    path: '/series',
+    method: 'get',
+    handler: async (req) => {
+      const { start, end, field } = req.query as { start?: string; end?: string; field?: string }
+      const aggregate = (req.query as any)?.aggregate as 'daily' | 'weekly' | 'monthly' | undefined
+
+      if (!aggregate || !['daily', 'weekly', 'monthly'].includes(aggregate)) {
+        return Response.json(
+          { error: 'Query parameter "aggregate" must be one of: daily, weekly, monthly' },
+          { status: 400 },
+        )
+      }
+
+      // For all aggregates, we require a valid field and date range
+      const validationError = validateStatsParams(start, end, field)
+      if (validationError) {
+        return validationError
+      }
+
+      const fieldName = field as StatField
+
+      const startDt = toUTCDate(start!)
+      const endDt = toUTCDate(end!)
+
+      // Precompute daily averages by date and the list of dates in the range
+      const dailyValueByDate = await buildDailyValueMap(req.payload, start!, end!, fieldName)
+      const allDays = listAllDatesInRange(startDt, endDt)
+
+      if (aggregate === 'daily') {
+        const series = allDays.map((date) => ({
+          date,
+          value: formatAverage(
+            dailyValueByDate.has(date) ? dailyValueByDate.get(date)! : null,
+            fieldName,
+          ),
+        }))
+        return createCachedResponse({
+          aggregate,
+          field: fieldName,
+          start,
+          end,
+          series,
+          count: series.length,
+        })
+      }
+
+      if (aggregate === 'weekly') {
+        // Partition into contiguous 7-day windows from start date, including trailing partial week.
+        const series: Array<{ start: string; end: string; value: number | null; count: number }> =
+          []
+        const weekWindows = getWeekWindows(startDt, endDt)
+        for (const window of weekWindows) {
+          const windowDays = allDays.filter((d) => d >= window.start && d < window.endExclusive)
+          let sum = 0
+          let count = 0
+          for (const date of windowDays) {
+            if (!dailyValueByDate.has(date)) continue
+            sum += dailyValueByDate.get(date)!
+            count += 1
+          }
+          const value = formatAverage(count > 0 ? sum / count : null, fieldName)
+          series.push({ start: window.start, end: window.endExclusive, value, count })
+        }
+        return createCachedResponse({
+          aggregate,
+          field: fieldName,
+          start,
+          end,
+          series,
+          count: series.length,
+        })
+      }
+
+      // monthly: multiple calendar month buckets across the range
+      const monthWindows = getMonthlyWindows(startDt, endDt)
+      const series = monthWindows.map((w) => {
+        let sum = 0
+        let count = 0
+        for (const date of allDays) {
+          if (date < w.start || date >= w.endExclusive) continue
+          if (!dailyValueByDate.has(date)) continue
+          sum += dailyValueByDate.get(date)!
+          count += 1
+        }
+        const value = formatAverage(count > 0 ? sum / count : null, fieldName)
+        return { start: w.start, end: w.endExclusive, value, count }
+      })
+      return createCachedResponse({
+        aggregate,
+        field: fieldName,
+        start,
+        end,
+        series,
+        count: series.length,
+      })
     },
   },
   {
@@ -130,7 +233,7 @@ export const dayEntryEndpoints: Endpoint[] = [
         { sum: 0, count: 0 },
       )
 
-      const average = count > 0 ? sum / count : null
+      const average = formatAverage(count > 0 ? sum / count : null, field as StatField)
       const median = calculateMedian(values)
 
       const response: StatsResponse = {
