@@ -52,7 +52,7 @@ export const Places: CollectionConfig = {
   indexes: [
     { fields: ['code'], unique: true },
     { fields: ['alpha2'], unique: true },
-    { fields: ['region']},
+    { fields: ['region'] },
     { fields: ['name'], unique: true },
     { fields: ['code', 'region', 'name', 'alpha2'] },
   ],
@@ -72,7 +72,7 @@ export const Places: CollectionConfig = {
       handler: async (req) => {
         const { docs } = await req.payload.find({
           collection: 'places',
-          limit: 6,
+          limit: 1000,
         })
 
         const summary: Record<string, { count: number; places: Place[] }> = {}
