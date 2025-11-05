@@ -68,11 +68,10 @@ export interface Config {
   blocks: {};
   collections: {
     users: User;
-    media: Media;
     checklists: Checklist;
     'checklist-groups': ChecklistGroup;
     'fa-icons': FaIcon;
-    'day-entries': DayEntry;
+    places: Place;
     search: Search;
     'payload-folders': FolderInterface;
     'payload-locked-documents': PayloadLockedDocument;
@@ -86,11 +85,10 @@ export interface Config {
   };
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
-    media: MediaSelect<false> | MediaSelect<true>;
     checklists: ChecklistsSelect<false> | ChecklistsSelect<true>;
     'checklist-groups': ChecklistGroupsSelect<false> | ChecklistGroupsSelect<true>;
     'fa-icons': FaIconsSelect<false> | FaIconsSelect<true>;
-    'day-entries': DayEntriesSelect<false> | DayEntriesSelect<true>;
+    places: PlacesSelect<false> | PlacesSelect<true>;
     search: SearchSelect<false> | SearchSelect<true>;
     'payload-folders': PayloadFoldersSelect<false> | PayloadFoldersSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -153,51 +151,6 @@ export interface User {
       }[]
     | null;
   password?: string | null;
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media".
- */
-export interface Media {
-  id: string;
-  alt: string;
-  updatedAt: string;
-  createdAt: string;
-  url?: string | null;
-  thumbnailURL?: string | null;
-  filename?: string | null;
-  mimeType?: string | null;
-  filesize?: number | null;
-  width?: number | null;
-  height?: number | null;
-  focalX?: number | null;
-  focalY?: number | null;
-  sizes?: {
-    thumb?: {
-      url?: string | null;
-      width?: number | null;
-      height?: number | null;
-      mimeType?: string | null;
-      filesize?: number | null;
-      filename?: string | null;
-    };
-    square?: {
-      url?: string | null;
-      width?: number | null;
-      height?: number | null;
-      mimeType?: string | null;
-      filesize?: number | null;
-      filename?: string | null;
-    };
-    hero?: {
-      url?: string | null;
-      width?: number | null;
-      height?: number | null;
-      mimeType?: string | null;
-      filesize?: number | null;
-      filename?: string | null;
-    };
-  };
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -284,17 +237,20 @@ export interface FolderInterface {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "day-entries".
+ * via the `definition` "places".
  */
-export interface DayEntry {
+export interface Place {
   id: string;
-  user: string | User;
-  date: string;
-  moodRating: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10';
-  weight: number;
-  minutesPainted?: number | null;
-  dives?: number | null;
-  note?: string | null;
+  /**
+   * Use ISO-3166-1 alpha-3 (e.g., GBR, USA, FRA). https://www.iso.org/obp/ui/#home
+   */
+  code: string;
+  name: string;
+  /**
+   * Use ISO-3166-1 alpha-2 (e.g., GB, US, FR). https://www.iso.org/obp/ui/#home
+   */
+  alpha2: string;
+  region: 'EU' | 'NA' | 'SA' | 'AS' | 'AF' | 'OC';
   updatedAt: string;
   createdAt: string;
 }
@@ -336,10 +292,6 @@ export interface PayloadLockedDocument {
         value: string | User;
       } | null)
     | ({
-        relationTo: 'media';
-        value: string | Media;
-      } | null)
-    | ({
         relationTo: 'checklists';
         value: string | Checklist;
       } | null)
@@ -352,8 +304,8 @@ export interface PayloadLockedDocument {
         value: string | FaIcon;
       } | null)
     | ({
-        relationTo: 'day-entries';
-        value: string | DayEntry;
+        relationTo: 'places';
+        value: string | Place;
       } | null)
     | ({
         relationTo: 'search';
@@ -430,58 +382,6 @@ export interface UsersSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "media_select".
- */
-export interface MediaSelect<T extends boolean = true> {
-  alt?: T;
-  updatedAt?: T;
-  createdAt?: T;
-  url?: T;
-  thumbnailURL?: T;
-  filename?: T;
-  mimeType?: T;
-  filesize?: T;
-  width?: T;
-  height?: T;
-  focalX?: T;
-  focalY?: T;
-  sizes?:
-    | T
-    | {
-        thumb?:
-          | T
-          | {
-              url?: T;
-              width?: T;
-              height?: T;
-              mimeType?: T;
-              filesize?: T;
-              filename?: T;
-            };
-        square?:
-          | T
-          | {
-              url?: T;
-              width?: T;
-              height?: T;
-              mimeType?: T;
-              filesize?: T;
-              filename?: T;
-            };
-        hero?:
-          | T
-          | {
-              url?: T;
-              width?: T;
-              height?: T;
-              mimeType?: T;
-              filesize?: T;
-              filename?: T;
-            };
-      };
-}
-/**
- * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "checklists_select".
  */
 export interface ChecklistsSelect<T extends boolean = true> {
@@ -524,16 +424,13 @@ export interface FaIconsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
- * via the `definition` "day-entries_select".
+ * via the `definition` "places_select".
  */
-export interface DayEntriesSelect<T extends boolean = true> {
-  user?: T;
-  date?: T;
-  moodRating?: T;
-  weight?: T;
-  minutesPainted?: T;
-  dives?: T;
-  note?: T;
+export interface PlacesSelect<T extends boolean = true> {
+  code?: T;
+  name?: T;
+  alpha2?: T;
+  region?: T;
   updatedAt?: T;
   createdAt?: T;
 }

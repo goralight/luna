@@ -6,14 +6,15 @@ import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
 import sharp from 'sharp'
 
+import { s3Storage } from '@payloadcms/storage-s3'
 import { Users } from './collections/Users'
 import { Media } from './collections/Media'
 import { Checklists } from './collections/Checklists'
 import { ChecklistGroups } from './collections/ChecklistGroups'
-import { s3Storage } from '@payloadcms/storage-s3'
 import { searchPlugin } from '@payloadcms/plugin-search'
 import { FaIcons } from './collections/faIcons'
 import { DayEntries } from './collections/DayEntry/index'
+import { Places } from './collections/Places'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -25,7 +26,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Checklists, ChecklistGroups, FaIcons, DayEntries],
+  collections: [Users, Checklists, ChecklistGroups, FaIcons, Media, DayEntries, Places],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
