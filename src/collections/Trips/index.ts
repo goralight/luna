@@ -242,7 +242,7 @@ export const Trips: CollectionConfig = {
             }
           : null
 
-        const mostVistedRegion = getTopKey(regionCounts)
+        const mostVisitedRegion = getTopKey(regionCounts)
         const mostCommonTripType = getTopKey(tripTypeCounts)
 
         const visitedCountryCount = await req.payload.count({
@@ -257,7 +257,7 @@ export const Trips: CollectionConfig = {
           countryCount: visitedCountryCount.totalDocs,
           cityCount: uniqueCityKeys.size,
           mostVisitedCountry,
-          mostVistedRegion,
+          mostVisitedRegion,
           mostCommonTripType,
           coverage,
         })
