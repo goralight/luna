@@ -91,13 +91,14 @@ export const Trips: CollectionConfig = {
     {
       name: 'images',
       type: 'array',
+      minRows: 0,
+      maxRows: 4,
       fields: [
         {
           name: 'image',
-          type: 'relationship',
+          type: 'upload',
           relationTo: 'media',
-          maxRows: 4,
-          hasMany: true,
+          required: true,
         },
         {
           name: 'alt',
