@@ -153,7 +153,7 @@ export const Trips: CollectionConfig = {
         let page = 1
         let hasMore = true
 
-        const uniqueCityKeys: Set<string> = new Set()
+        let tripCount = 0
 
         const countryCounts: Record<
           string,
@@ -175,11 +175,7 @@ export const Trips: CollectionConfig = {
           })
 
           for (const trip of result.docs as Trip[]) {
-            const cityRaw: Trip['city'] | undefined = trip.city
-            if (cityRaw) {
-              const key = cityRaw.trim().toLowerCase()
-              if (key) uniqueCityKeys.add(key)
-            }
+            tripCount += 1
 
             const place: Trip['place'] = trip.place
             const placeId: string | undefined = typeof place === 'string' ? place : place?.id
@@ -255,7 +251,7 @@ export const Trips: CollectionConfig = {
 
         return createCachedResponse({
           countryCount: visitedCountryCount.totalDocs,
-          cityCount: uniqueCityKeys.size,
+          tripCount,
           mostVisitedCountry,
           mostVisitedRegion,
           mostCommonTripType,
