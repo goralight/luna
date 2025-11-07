@@ -1,8 +1,6 @@
 import type { CollectionConfig } from 'payload'
 import type { Trip, Place } from '@/payload-types'
 import { createCachedResponse, roundToDecimals } from '../DayEntry/stats-helpers'
-import { getEmojiFlag } from 'countries-list'
-import type { TCountryCode } from 'countries-list'
 import countriesList from './countriesList'
 
 export const Trips: CollectionConfig = {
@@ -235,7 +233,7 @@ export const Trips: CollectionConfig = {
         const mostVisitedCountry = topCountry
           ? {
               name: topCountry.name,
-              emoji: topCountry.alpha2 ? getEmojiFlag(topCountry.alpha2 as TCountryCode) : null,
+              alpha2: topCountry.alpha2,
             }
           : null
 
