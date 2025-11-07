@@ -259,5 +259,39 @@ export const Trips: CollectionConfig = {
         })
       },
     },
+    {
+      path: '/by-place/:alpha3',
+      method: 'get',
+      handler: async (req) => {
+        const alpha3FromPath = (req as any)?.routeParams?.alpha3 ?? (req as any)?.params?.alpha3
+        const code = alpha3FromPath?.toUpperCase()
+        if (!code || !/^[A-Z]{3}$/.test(code)) {
+          return Response.json(
+            { error: 'Path parameter ":alpha3" (ISO-3166-1 alpha-3) is required' },
+            { status: 400 },
+          )
+        }
+
+        const placeLookup = await req.payload.find({
+          collection: 'places',
+          where: { code: { equals: code } },
+          limit: 1,
+        })
+        const placeId = placeLookup.docs[0]?.id
+        if (!placeId) {
+          return Response.json({ error: `No place found for alpha3 code ${code}` }, { status: 404 })
+        }
+
+        const result = await req.payload.find({
+          collection: 'trips',
+          where: { place: { equals: placeId } },
+          limit: 1000,
+          sort: '-startDate',
+          depth: 1,
+        })
+
+        return createCachedResponse(result.docs)
+      },
+    },
   ],
 }
