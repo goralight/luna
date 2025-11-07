@@ -15,6 +15,7 @@ import { searchPlugin } from '@payloadcms/plugin-search'
 import { FaIcons } from './collections/faIcons'
 import { DayEntries } from './collections/DayEntry/index'
 import { Places } from './collections/Places'
+import { Trips } from './collections/Trips/index'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -26,7 +27,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Checklists, ChecklistGroups, FaIcons, Media, DayEntries, Places],
+  collections: [Users, Checklists, ChecklistGroups, FaIcons, Media, Places, Trips, DayEntries],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {

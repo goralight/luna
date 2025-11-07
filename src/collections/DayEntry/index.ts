@@ -29,4 +29,3 @@ export const DayEntries: CollectionConfig = {
   fields: dayEntryFields,
   endpoints: dayEntryEndpoints,
 }
-

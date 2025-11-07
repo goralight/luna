@@ -71,7 +71,10 @@ export interface Config {
     checklists: Checklist;
     'checklist-groups': ChecklistGroup;
     'fa-icons': FaIcon;
+    media: Media;
     places: Place;
+    trips: Trip;
+    'day-entries': DayEntry;
     search: Search;
     'payload-folders': FolderInterface;
     'payload-locked-documents': PayloadLockedDocument;
@@ -88,7 +91,10 @@ export interface Config {
     checklists: ChecklistsSelect<false> | ChecklistsSelect<true>;
     'checklist-groups': ChecklistGroupsSelect<false> | ChecklistGroupsSelect<true>;
     'fa-icons': FaIconsSelect<false> | FaIconsSelect<true>;
+    media: MediaSelect<false> | MediaSelect<true>;
     places: PlacesSelect<false> | PlacesSelect<true>;
+    trips: TripsSelect<false> | TripsSelect<true>;
+    'day-entries': DayEntriesSelect<false> | DayEntriesSelect<true>;
     search: SearchSelect<false> | SearchSelect<true>;
     'payload-folders': PayloadFoldersSelect<false> | PayloadFoldersSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -237,6 +243,51 @@ export interface FolderInterface {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media".
+ */
+export interface Media {
+  id: string;
+  alt: string;
+  updatedAt: string;
+  createdAt: string;
+  url?: string | null;
+  thumbnailURL?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  filesize?: number | null;
+  width?: number | null;
+  height?: number | null;
+  focalX?: number | null;
+  focalY?: number | null;
+  sizes?: {
+    thumb?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+    square?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+    hero?: {
+      url?: string | null;
+      width?: number | null;
+      height?: number | null;
+      mimeType?: string | null;
+      filesize?: number | null;
+      filename?: string | null;
+    };
+  };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "places".
  */
 export interface Place {
@@ -251,6 +302,67 @@ export interface Place {
    */
   alpha2: string;
   region: 'EU' | 'NA' | 'SA' | 'AS' | 'AF' | 'OC';
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Track your journeys. Each trip represents a visit to a city, within an area or region, and country. For example: Corralejo (city) in Fuerteventura (area), Spain (country); or Bratislava (city) in Slovakia (area and country).
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "trips".
+ */
+export interface Trip {
+  id: string;
+  /**
+   * This is the city of the trip, the title. eg: Corralejo, Bratislava
+   */
+  city: string;
+  /**
+   * This is the country or the place of the trip. eg: Spain, Slovakia
+   */
+  place: string | Place;
+  /**
+   * This is the region / area of the trip (can be the same as the place). eg: Fuerteventura, Slovakia
+   */
+  area?: string | null;
+  tripType?: ('city-break' | 'beach-break' | 'diving-trip' | 'country-tour') | null;
+  startDate: string;
+  endDate: string;
+  rating?: ('0' | '1' | '2' | '3' | '4' | '5') | null;
+  images?:
+    | {
+        image?: (string | Media)[] | null;
+        alt: string;
+        id?: string | null;
+      }[]
+    | null;
+  description: string;
+  favoriteMemory?: string | null;
+  accommodation?: string | null;
+  weather?: string | null;
+  placesVisited?:
+    | {
+        place: string;
+        id?: string | null;
+      }[]
+    | null;
+  recommend?: ('yes' | 'maybe' | 'no') | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "day-entries".
+ */
+export interface DayEntry {
+  id: string;
+  user: string | User;
+  date: string;
+  moodRating: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10';
+  weight?: number | null;
+  minutesPainted?: number | null;
+  dives?: number | null;
+  note?: string | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -304,8 +416,20 @@ export interface PayloadLockedDocument {
         value: string | FaIcon;
       } | null)
     | ({
+        relationTo: 'media';
+        value: string | Media;
+      } | null)
+    | ({
         relationTo: 'places';
         value: string | Place;
+      } | null)
+    | ({
+        relationTo: 'trips';
+        value: string | Trip;
+      } | null)
+    | ({
+        relationTo: 'day-entries';
+        value: string | DayEntry;
       } | null)
     | ({
         relationTo: 'search';
@@ -424,6 +548,58 @@ export interface FaIconsSelect<T extends boolean = true> {
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "media_select".
+ */
+export interface MediaSelect<T extends boolean = true> {
+  alt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+  url?: T;
+  thumbnailURL?: T;
+  filename?: T;
+  mimeType?: T;
+  filesize?: T;
+  width?: T;
+  height?: T;
+  focalX?: T;
+  focalY?: T;
+  sizes?:
+    | T
+    | {
+        thumb?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+        square?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+        hero?:
+          | T
+          | {
+              url?: T;
+              width?: T;
+              height?: T;
+              mimeType?: T;
+              filesize?: T;
+              filename?: T;
+            };
+      };
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "places_select".
  */
 export interface PlacesSelect<T extends boolean = true> {
@@ -431,6 +607,54 @@ export interface PlacesSelect<T extends boolean = true> {
   name?: T;
   alpha2?: T;
   region?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "trips_select".
+ */
+export interface TripsSelect<T extends boolean = true> {
+  city?: T;
+  place?: T;
+  area?: T;
+  tripType?: T;
+  startDate?: T;
+  endDate?: T;
+  rating?: T;
+  images?:
+    | T
+    | {
+        image?: T;
+        alt?: T;
+        id?: T;
+      };
+  description?: T;
+  favoriteMemory?: T;
+  accommodation?: T;
+  weather?: T;
+  placesVisited?:
+    | T
+    | {
+        place?: T;
+        id?: T;
+      };
+  recommend?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "day-entries_select".
+ */
+export interface DayEntriesSelect<T extends boolean = true> {
+  user?: T;
+  date?: T;
+  moodRating?: T;
+  weight?: T;
+  minutesPainted?: T;
+  dives?: T;
+  note?: T;
   updatedAt?: T;
   createdAt?: T;
 }
