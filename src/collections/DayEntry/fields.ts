@@ -15,6 +15,7 @@ export const dayEntryFields: Field[] = [
     type: 'date',
     required: true,
     index: true,
+    unique: true,
     admin: {
       readOnly: true,
       date: {
