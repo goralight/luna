@@ -110,16 +110,46 @@ export async function fetchDayEntriesPage(
 }
 
 export function extractNumericValue(document: any, fieldName: string): number | null {
-  const value = document[fieldName]
-  if (value == null) {
-    return null
+  // Prefer value from trackers blocks if present
+  const trackers = Array.isArray(document?.trackers) ? document.trackers : []
+  const blockTypeByField: Record<string, string> = {
+    moodRating: 'mood',
+    dives: 'diving',
+    weight: 'weight',
+    minutesPainted: 'painting',
   }
-
-  const numericValue = Number(value)
+  const blockType = blockTypeByField[fieldName]
+  if (blockType) {
+    const block = trackers.find((b: any) => b?.blockType === blockType)
+    if (block?.value != null) {
+      const numeric = Number(block.value)
+      return Number.isNaN(numeric) ? null : numeric
+    }
+  }
+  // Fallback to legacy top-level field
+  const legacy = document[fieldName]
+  if (legacy == null) return null
+  const numericValue = Number(legacy)
   return Number.isNaN(numericValue) ? null : numericValue
 }
 
 export function extractFieldValue(document: any, fieldName: string): string | number | null {
+  // Prefer trackers block value if available
+  const trackers = Array.isArray(document?.trackers) ? document.trackers : []
+  const blockTypeByField: Record<string, string> = {
+    moodRating: 'mood',
+    dives: 'diving',
+    weight: 'weight',
+    minutesPainted: 'painting',
+  }
+  const blockType = blockTypeByField[fieldName]
+  if (blockType) {
+    const block = trackers.find((b: any) => b?.blockType === blockType)
+    if (block?.value != null) {
+      return block.value
+    }
+  }
+  // Fallback to legacy top-level field
   const value = document[fieldName]
   return value ?? null
 }

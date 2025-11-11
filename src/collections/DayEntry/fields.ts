@@ -23,6 +23,58 @@ export const dayEntryFields: Field[] = [
       },
     },
   },
+  // New trackers blocks with per-tracker notes
+  {
+    name: 'trackers',
+    type: 'blocks',
+    required: false,
+    defaultValue: () => [
+      { blockType: 'mood', value: undefined, note: '' },
+      { blockType: 'weight', value: undefined, note: '' },
+    ],
+    blocks: [
+      {
+        slug: 'mood',
+        labels: { singular: 'Mood', plural: 'Mood' },
+        fields: [
+          {
+            name: 'value',
+            type: 'select',
+            options: Array.from({ length: 10 }, (_, i) => {
+              const value = String(i + 1)
+              return { label: value, value }
+            }),
+            required: false,
+          },
+          { name: 'note', type: 'textarea', required: false },
+        ],
+      },
+      {
+        slug: 'weight',
+        labels: { singular: 'Weight', plural: 'Weight' },
+        fields: [
+          { name: 'value', type: 'number', required: false },
+          { name: 'note', type: 'textarea', required: false },
+        ],
+      },
+      {
+        slug: 'diving',
+        labels: { singular: 'Diving', plural: 'Diving' },
+        fields: [
+          { name: 'value', type: 'number', min: 0, max: 5, required: false },
+          { name: 'note', type: 'textarea', required: false },
+        ],
+      },
+      {
+        slug: 'painting',
+        labels: { singular: 'Painting', plural: 'Painting' },
+        fields: [
+          { name: 'value', type: 'number', min: 0, required: false },
+          { name: 'note', type: 'textarea', required: false },
+        ],
+      },
+    ],
+  },
   {
     name: 'moodRating',
     type: 'select',
@@ -30,15 +82,16 @@ export const dayEntryFields: Field[] = [
       const value = String(i + 1)
       return { label: value, value }
     }),
-    required: true,
+    required: false,
+    admin: { hidden: true },
   },
   {
     name: 'weight',
     type: 'number',
     required: false,
+    admin: { hidden: true },
   },
-  { name: 'minutesPainted', type: 'number', min: 0, required: false },
-  { name: 'dives', type: 'number', min: 0, max: 5, required: false },
-  { name: 'note', type: 'textarea', required: false },
+  { name: 'minutesPainted', type: 'number', min: 0, required: false, admin: { hidden: true } },
+  { name: 'dives', type: 'number', min: 0, max: 5, required: false, admin: { hidden: true } },
+  { name: 'note', type: 'textarea', required: false, admin: { hidden: true } },
 ]
-

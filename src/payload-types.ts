@@ -331,7 +331,7 @@ export interface Trip {
   rating?: ('0' | '1' | '2' | '3' | '4' | '5') | null;
   images?:
     | {
-        image?: (string | Media)[] | null;
+        image: string | Media;
         alt: string;
         id?: string | null;
       }[]
@@ -358,7 +358,39 @@ export interface DayEntry {
   id: string;
   user: string | User;
   date: string;
-  moodRating: '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10';
+  trackers?:
+    | (
+        | {
+            value?: ('1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10') | null;
+            note?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'mood';
+          }
+        | {
+            value?: number | null;
+            note?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'weight';
+          }
+        | {
+            value?: number | null;
+            note?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'diving';
+          }
+        | {
+            value?: number | null;
+            note?: string | null;
+            id?: string | null;
+            blockName?: string | null;
+            blockType: 'painting';
+          }
+      )[]
+    | null;
+  moodRating?: ('1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10') | null;
   weight?: number | null;
   minutesPainted?: number | null;
   dives?: number | null;
@@ -650,6 +682,42 @@ export interface TripsSelect<T extends boolean = true> {
 export interface DayEntriesSelect<T extends boolean = true> {
   user?: T;
   date?: T;
+  trackers?:
+    | T
+    | {
+        mood?:
+          | T
+          | {
+              value?: T;
+              note?: T;
+              id?: T;
+              blockName?: T;
+            };
+        weight?:
+          | T
+          | {
+              value?: T;
+              note?: T;
+              id?: T;
+              blockName?: T;
+            };
+        diving?:
+          | T
+          | {
+              value?: T;
+              note?: T;
+              id?: T;
+              blockName?: T;
+            };
+        painting?:
+          | T
+          | {
+              value?: T;
+              note?: T;
+              id?: T;
+              blockName?: T;
+            };
+      };
   moodRating?: T;
   weight?: T;
   minutesPainted?: T;
