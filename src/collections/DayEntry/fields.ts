@@ -15,7 +15,6 @@ export const dayEntryFields: Field[] = [
     type: 'date',
     required: true,
     index: true,
-    unique: true,
     admin: {
       readOnly: true,
       date: {
@@ -32,6 +31,19 @@ export const dayEntryFields: Field[] = [
       { blockType: 'mood', value: undefined, note: '' },
       { blockType: 'weight', value: undefined, note: '' },
     ],
+    validate: (blocks) => {
+      if (!Array.isArray(blocks)) return true
+      const seen = new Set<string>()
+      for (const block of blocks) {
+        const slug = (block as any)?.blockType as string | undefined
+        if (!slug) continue
+        if (seen.has(slug)) {
+          return `You can only add one ${slug} tracker`
+        }
+        seen.add(slug)
+      }
+      return true
+    },
     blocks: [
       {
         slug: 'mood',

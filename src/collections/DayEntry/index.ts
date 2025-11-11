@@ -47,7 +47,7 @@ export const DayEntries: CollectionConfig = {
       : {}),
   },
   indexes: [
-    { fields: ['user', 'date'] },
+    { fields: ['user', 'date'], unique: true },
     { fields: ['date', 'moodRating', 'note'] },
     { fields: ['date', 'weight', 'note'] },
     { fields: ['date', 'dives', 'note'] },
