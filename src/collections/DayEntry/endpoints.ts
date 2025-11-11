@@ -91,7 +91,6 @@ export const dayEntryEndpoints: Endpoint[] = [
     path: '/series/notes',
     method: 'get',
     handler: async (req) => {
-      console.log('notes')
       const { start, end, field } = req.query as StatsQueryParams
       const validationError = validateStatsParams(start, end, field)
       if (validationError) {
