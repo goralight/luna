@@ -332,7 +332,6 @@ export interface Trip {
   images?:
     | {
         image: string | Media;
-        alt: string;
         id?: string | null;
       }[]
     | null;
@@ -658,7 +657,6 @@ export interface TripsSelect<T extends boolean = true> {
     | T
     | {
         image?: T;
-        alt?: T;
         id?: T;
       };
   description?: T;

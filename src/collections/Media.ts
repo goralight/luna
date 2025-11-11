@@ -5,6 +5,10 @@ export const Media: CollectionConfig = {
   access: {
     read: () => true,
   },
+  admin: {
+    useAsTitle: 'alt',
+    defaultColumns: ['alt', 'filename', 'filesize', 'width', 'height'],
+  },
   fields: [
     {
       name: 'alt',
