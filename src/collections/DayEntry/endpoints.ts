@@ -13,6 +13,8 @@ import {
   getWeekWindows,
   getMonthlyWindows,
   formatAverage,
+  forEachDayEntry,
+  normalizeDateString,
 } from './stats-helpers'
 import { toUTCDate } from './stats-helpers'
 import { DistributionResponse, StatField, StatsQueryParams, StatsResponse } from './types'
@@ -83,6 +85,49 @@ export const dayEntryEndpoints: Endpoint[] = [
       }
 
       return createCachedResponse(response)
+    },
+  },
+  {
+    path: '/series/notes',
+    method: 'get',
+    handler: async (req) => {
+      console.log('notes')
+      const { start, end, field } = req.query as StatsQueryParams
+      const validationError = validateStatsParams(start, end, field)
+      if (validationError) {
+        return validationError
+      }
+      const normalized = normalizeStatField(field!)!
+      // map stat field -> trackers blockType
+      const blockTypeByField: Record<StatField, string> = {
+        mood: 'mood',
+        diving: 'diving',
+        weight: 'weight',
+        painting: 'painting',
+      }
+      const blockType = blockTypeByField[normalized]
+
+      const notes: Array<{ date: string; note: string }> = []
+      await forEachDayEntry(req.payload, start!, end!, (doc) => {
+        const trackers = Array.isArray(doc?.trackers) ? doc.trackers : []
+        const block = trackers.find((b: any) => b?.blockType === blockType)
+        const text: string | undefined = (block?.note ?? undefined)?.toString()?.trim()
+        if (text) {
+          notes.push({
+            date: normalizeDateString(doc.date),
+            note: text,
+          })
+        }
+      })
+
+      return createCachedResponse({
+        aggregate: 'notes',
+        field: normalized,
+        start: start!,
+        end: end!,
+        notes,
+        count: notes.length,
+      })
     },
   },
   {
