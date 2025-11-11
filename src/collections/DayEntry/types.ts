@@ -1,4 +1,4 @@
-export const ALLOWED_STAT_FIELDS = ['moodRating', 'dives', 'weight', 'minutesPainted'] as const
+export const ALLOWED_STAT_FIELDS = ['mood', 'diving', 'weight', 'painting'] as const
 export const PAGINATION_LIMIT = 200
 export const CACHE_MAX_AGE = 60
 
