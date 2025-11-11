@@ -1,4 +1,4 @@
-import { Place } from '@/payload-types'
+import { Place, Trip } from '@/payload-types'
 import { CollectionConfig } from 'payload'
 import { createCachedResponse } from './DayEntry/stats-helpers'
 
@@ -75,14 +75,33 @@ export const Places: CollectionConfig = {
           limit: 1000,
         })
 
-        const summary: Record<string, { count: number; places: Place[] }> = {}
+        // fetch trips to know which places have at least one trip
+        const tripsResult = await req.payload.find({
+          collection: 'trips',
+          limit: 1000,
+          depth: 0,
+        })
+        const placeIdsWithTrips = new Set<string>()
+        for (const trip of tripsResult.docs as Trip[]) {
+          const placeField = trip.place
+          const placeId: string | undefined =
+            typeof placeField === 'string' ? placeField : placeField?.id
+          if (placeId) placeIdsWithTrips.add(placeId)
+        }
+
+        type PlaceWithFlag = Place & { hasTrip: boolean }
+        const summary: Record<string, { count: number; places: PlaceWithFlag[] }> = {}
 
         for (const place of docs) {
           const region = place.region
           if (!summary[region]) {
             summary[region] = { count: 0, places: [] }
           }
-          summary[region].places.push(place)
+          const placeWithFlag: PlaceWithFlag = {
+            ...place,
+            hasTrip: placeIdsWithTrips.has(place.id),
+          }
+          summary[region].places.push(placeWithFlag)
           summary[region].count += 1
         }
 
