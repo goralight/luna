@@ -4,6 +4,7 @@ import {
   calculateConsistencyStats,
   calculateMedian,
   createCachedResponse,
+  normalizeStatField,
   fetchAllNumericValues,
   fillDistributionGaps,
   validateStatsParams,
@@ -29,12 +30,13 @@ export const dayEntryEndpoints: Endpoint[] = [
       }
 
       // Single data fetch
-      const values = await fetchAllNumericValues(req.payload, start!, end!, field as StatField)
+      const normalized = normalizeStatField(field!)!
+      const values = await fetchAllNumericValues(req.payload, start!, end!, normalized)
 
       // Calculate everything from the values array
       const count = values.length
       const sum = values.reduce((acc, val) => acc + val, 0)
-      const average = formatAverage(count > 0 ? sum / count : null, field as StatField)
+      const average = formatAverage(count > 0 ? sum / count : null, normalized)
       const median = calculateMedian(values)
 
       // Calculate min and max
@@ -53,7 +55,7 @@ export const dayEntryEndpoints: Endpoint[] = [
 
       // Compute distribution for moodRating and dives
       let distribution: Record<string, number> | undefined = undefined
-      if (field === 'moodRating' || field === 'dives') {
+      if (normalized === 'mood' || normalized === 'diving') {
         const rawDistribution = values.reduce(
           (acc, val) => {
             const key = String(val)
@@ -62,14 +64,14 @@ export const dayEntryEndpoints: Endpoint[] = [
           },
           {} as Record<string, number>,
         )
-        distribution = fillDistributionGaps(rawDistribution, field as StatField)
+        distribution = fillDistributionGaps(rawDistribution, normalized)
       }
 
       // Calculate consistency statistics
       const consistency = calculateConsistencyStats(values)
 
       const response = {
-        field: field!,
+        field: normalized,
         start: start!,
         end: end!,
         count,
@@ -103,7 +105,7 @@ export const dayEntryEndpoints: Endpoint[] = [
         return validationError
       }
 
-      const fieldName = field as StatField
+      const fieldName = normalizeStatField(field!)!
 
       const startDt = toUTCDate(start!)
       const endDt = toUTCDate(end!)
@@ -192,12 +194,13 @@ export const dayEntryEndpoints: Endpoint[] = [
         return validationError
       }
 
-      const values = await fetchAllNumericValues(req.payload, start!, end!, field as StatField)
+      const normalized = normalizeStatField(field!)!
+      const values = await fetchAllNumericValues(req.payload, start!, end!, normalized)
       const { standardDeviation, variance, coefficientOfVariation } =
         calculateConsistencyStats(values)
 
       const response = {
-        field: field!,
+        field: normalized,
         start: start!,
         end: end!,
         count: values.length,
@@ -221,7 +224,8 @@ export const dayEntryEndpoints: Endpoint[] = [
       }
 
       // Get all numeric values for median calculation
-      const values = await fetchAllNumericValues(req.payload, start!, end!, field as StatField)
+      const normalized = normalizeStatField(field!)!
+      const values = await fetchAllNumericValues(req.payload, start!, end!, normalized)
 
       // Aggregate sum and count for average
       const { sum, count } = values.reduce(
@@ -233,11 +237,11 @@ export const dayEntryEndpoints: Endpoint[] = [
         { sum: 0, count: 0 },
       )
 
-      const average = formatAverage(count > 0 ? sum / count : null, field as StatField)
+      const average = formatAverage(count > 0 ? sum / count : null, normalized)
       const median = calculateMedian(values)
 
       const response: StatsResponse = {
-        field: field!,
+        field: normalized,
         start: start!,
         end: end!,
         count,
@@ -259,27 +263,23 @@ export const dayEntryEndpoints: Endpoint[] = [
         return validationError
       }
 
-      if (field !== 'moodRating' && field !== 'dives') {
+      const normalized = normalizeStatField(field!)!
+      if (normalized !== 'mood' && normalized !== 'diving') {
         return Response.json(
           {
-            error: 'Distribution endpoint only supports moodRating and dives fields',
+            error: 'Distribution endpoint only supports mood and diving fields',
           },
           { status: 400 },
         )
       }
 
-      const distribution = await aggregateFieldDistribution(
-        req.payload,
-        start!,
-        end!,
-        field as StatField,
-      )
+      const distribution = await aggregateFieldDistribution(req.payload, start!, end!, normalized)
 
-      const filledDistribution = fillDistributionGaps(distribution, field as StatField)
+      const filledDistribution = fillDistributionGaps(distribution, normalized)
       const totalCount = Object.values(filledDistribution).reduce((sum, count) => sum + count, 0)
 
       const response: DistributionResponse = {
-        field: field!,
+        field: normalized,
         start: start!,
         end: end!,
         totalCount,

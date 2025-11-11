@@ -2,6 +2,19 @@ import { ALLOWED_STAT_FIELDS, CACHE_MAX_AGE, PAGINATION_LIMIT, StatField } from 
 
 // Validation helpers
 
+export const FIELD_ALIASES = {
+  moodRating: 'mood',
+  minutesPainted: 'painting',
+  dives: 'diving',
+} as const
+
+export function normalizeStatField(field?: string): StatField | null {
+  if (!field) return null
+  if (ALLOWED_STAT_FIELDS.includes(field as StatField)) return field as StatField
+  const alias = (FIELD_ALIASES as Record<string, StatField | undefined>)[field]
+  return alias ?? null
+}
+
 export function validateStatsParams(
   start: string | undefined,
   end: string | undefined,
@@ -27,7 +40,7 @@ export function validateStatsParams(
 }
 
 export function isValidStatField(field: string | undefined): field is StatField {
-  return ALLOWED_STAT_FIELDS.includes(field as StatField)
+  return normalizeStatField(field) != null
 }
 
 // Data aggregation logic
@@ -110,47 +123,64 @@ export async function fetchDayEntriesPage(
 }
 
 export function extractNumericValue(document: any, fieldName: string): number | null {
+  const normalized = normalizeStatField(fieldName)
+  if (!normalized) return null
+
   // Prefer value from trackers blocks if present
   const trackers = Array.isArray(document?.trackers) ? document.trackers : []
-  const blockTypeByField: Record<string, string> = {
-    moodRating: 'mood',
-    dives: 'diving',
+  const blockTypeByField: Record<StatField, string> = {
+    mood: 'mood',
+    diving: 'diving',
     weight: 'weight',
-    minutesPainted: 'painting',
+    painting: 'painting',
   }
-  const blockType = blockTypeByField[fieldName]
-  if (blockType) {
-    const block = trackers.find((b: any) => b?.blockType === blockType)
-    if (block?.value != null) {
-      const numeric = Number(block.value)
-      return Number.isNaN(numeric) ? null : numeric
-    }
+  const legacyFieldBy: Record<StatField, string> = {
+    mood: 'moodRating',
+    diving: 'dives',
+    weight: 'weight',
+    painting: 'minutesPainted',
   }
+
+  const blockType = blockTypeByField[normalized]
+  const block = trackers.find((b: any) => b?.blockType === blockType)
+  if (block?.value != null) {
+    const numeric = Number(block.value)
+    return Number.isNaN(numeric) ? null : numeric
+  }
+
   // Fallback to legacy top-level field
-  const legacy = document[fieldName]
+  const legacy = document[legacyFieldBy[normalized]]
   if (legacy == null) return null
   const numericValue = Number(legacy)
   return Number.isNaN(numericValue) ? null : numericValue
 }
 
 export function extractFieldValue(document: any, fieldName: string): string | number | null {
+  const normalized = normalizeStatField(fieldName)
+  if (!normalized) return null
+
   // Prefer trackers block value if available
   const trackers = Array.isArray(document?.trackers) ? document.trackers : []
-  const blockTypeByField: Record<string, string> = {
-    moodRating: 'mood',
-    dives: 'diving',
+  const blockTypeByField: Record<StatField, string> = {
+    mood: 'mood',
+    diving: 'diving',
     weight: 'weight',
-    minutesPainted: 'painting',
+    painting: 'painting',
   }
-  const blockType = blockTypeByField[fieldName]
-  if (blockType) {
-    const block = trackers.find((b: any) => b?.blockType === blockType)
-    if (block?.value != null) {
-      return block.value
-    }
+  const legacyFieldBy: Record<StatField, string> = {
+    mood: 'moodRating',
+    diving: 'dives',
+    weight: 'weight',
+    painting: 'minutesPainted',
+  }
+
+  const blockType = blockTypeByField[normalized]
+  const block = trackers.find((b: any) => b?.blockType === blockType)
+  if (block?.value != null) {
+    return block.value
   }
   // Fallback to legacy top-level field
-  const value = document[fieldName]
+  const value = document[legacyFieldBy[normalized]]
   return value ?? null
 }
 
@@ -158,12 +188,15 @@ export function fillDistributionGaps(
   distribution: Record<string, number>,
   fieldName: StatField,
 ): Record<string, number> {
-  const minMaxMap = {
-    moodRating: { min: 1, max: 10 },
-    dives: { min: 1, max: 5 },
+  // Only mood and diving have bounded integer distributions
+  if (fieldName !== 'mood' && fieldName !== 'diving') {
+    return distribution
   }
-
-  const { min, max } = minMaxMap[fieldName as keyof typeof minMaxMap]
+  const ranges: Record<'mood' | 'diving', { min: number; max: number }> = {
+    mood: { min: 1, max: 10 },
+    diving: { min: 1, max: 5 },
+  }
+  const { min, max } = ranges[fieldName]
   const filled: Record<string, number> = {}
   for (let i = min; i <= max; i++) {
     const key = String(i)
