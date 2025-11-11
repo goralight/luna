@@ -120,7 +120,6 @@ export const dayEntryEndpoints: Endpoint[] = [
       })
 
       return createCachedResponse({
-        aggregate: 'notes',
         field: normalized,
         start: start!,
         end: end!,
