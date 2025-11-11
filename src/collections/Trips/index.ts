@@ -98,11 +98,6 @@ export const Trips: CollectionConfig = {
           relationTo: 'media',
           required: true,
         },
-        {
-          name: 'alt',
-          type: 'text',
-          required: true,
-        },
       ],
     },
     {
