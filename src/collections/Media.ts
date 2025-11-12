@@ -5,6 +5,7 @@ export const Media: CollectionConfig = {
   access: {
     read: () => true,
   },
+  folders: true,
   admin: {
     useAsTitle: 'alt',
     defaultColumns: ['alt', 'filename', 'filesize', 'width', 'height'],

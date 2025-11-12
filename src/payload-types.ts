@@ -83,7 +83,7 @@ export interface Config {
   };
   collectionsJoins: {
     'payload-folders': {
-      documentsAndFolders: 'payload-folders' | 'checklist-groups';
+      documentsAndFolders: 'payload-folders' | 'checklist-groups' | 'media';
     };
   };
   collectionsSelect: {
@@ -233,11 +233,15 @@ export interface FolderInterface {
           relationTo?: 'checklist-groups';
           value: string | ChecklistGroup;
         }
+      | {
+          relationTo?: 'media';
+          value: string | Media;
+        }
     )[];
     hasNextPage?: boolean;
     totalDocs?: number;
   };
-  folderType?: 'checklist-groups'[] | null;
+  folderType?: ('checklist-groups' | 'media')[] | null;
   updatedAt: string;
   createdAt: string;
 }
@@ -248,6 +252,7 @@ export interface FolderInterface {
 export interface Media {
   id: string;
   alt: string;
+  folder?: (string | null) | FolderInterface;
   updatedAt: string;
   createdAt: string;
   url?: string | null;
@@ -583,6 +588,7 @@ export interface FaIconsSelect<T extends boolean = true> {
  */
 export interface MediaSelect<T extends boolean = true> {
   alt?: T;
+  folder?: T;
   updatedAt?: T;
   createdAt?: T;
   url?: T;
