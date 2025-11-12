@@ -16,6 +16,7 @@ import { FaIcons } from './collections/faIcons'
 import { DayEntries } from './collections/DayEntry/index'
 import { Places } from './collections/Places'
 import { Trips } from './collections/Trips/index'
+import { Navigation } from './globals/Navigation'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -28,6 +29,7 @@ export default buildConfig({
     },
   },
   collections: [Users, Checklists, ChecklistGroups, FaIcons, Media, Places, Trips, DayEntries],
+  globals: [Navigation],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {
