@@ -168,6 +168,7 @@ def transform_garmin_dive(activity: dict) -> dict | None:
     start_local = activity.get("startTimeLocal")
     start_gmt = activity.get("startTimeGMT")
     if not start_local or not start_gmt:
+        print('Skipping activity without proper timestamps: ', activity)
         # Skip activities without proper timestamps
         return None
 
@@ -252,6 +253,7 @@ def main() -> None:
 
     for act in activities:
         activity_type = (act.get("activityType", {}) or {}).get("typeKey", "").lower()
+        print('activity_type: ', activity_type)
         if "diving" not in activity_type:
             continue
         save_dive_to_payload(act)
