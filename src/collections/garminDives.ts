@@ -36,8 +36,43 @@ export const GarminDives: CollectionConfig = {
       type: 'number',
     },
     {
+      name: 'avgDepthMeters',
+      type: 'number',
+    },
+    {
       name: 'location',
       type: 'text',
+    },
+    {
+      name: 'surfaceIntervalSeconds',
+      type: 'number',
+    },
+    {
+      name: 'gases',
+      type: 'array',
+      label: 'Dive Gases',
+      fields: [
+        {
+          name: 'oxygenPercent',
+          type: 'number',
+          required: true,
+          min: 0,
+          max: 100,
+          admin: {
+            description: 'Oxygen percentage (O₂)',
+          },
+        },
+        {
+          name: 'heliumPercent',
+          type: 'number',
+          required: true,
+          min: 0,
+          max: 100,
+          admin: {
+            description: 'Helium percentage (He)',
+          },
+        },
+      ],
     },
     {
       name: 'raw',
