@@ -123,6 +123,18 @@ def extract_gases(activity: dict) -> list[dict]:
         if gas.get("oxygenContent") is not None
     ]
 
+def extract_temperature(activity: dict) -> dict:
+    return {
+        "min": activity.get("minTemperature"),
+        "max": activity.get("maxTemperature"),
+    }
+
+def extract_coordinates(activity: dict) -> dict:
+    return {
+        "latitude": activity.get("startLatitude"),
+        "longitude": activity.get("startLongitude"),
+    }
+
 def transform_garmin_dive(activity: dict) -> dict:
     """
     Transform raw Garmin activity payload into the shape you want to store.
@@ -137,24 +149,20 @@ def transform_garmin_dive(activity: dict) -> dict:
     data = {
         "garminActivityId": str(activity["activityId"]),
         "title": activity.get("activityName"),
-        "startTime": activity.get("startTimeLocal") or activity.get("startTimeGMT"),
-
         # Store seconds in seconds (Garmin gives seconds as float)
         "durationSeconds": duration_seconds,
-
         # Depth fields are in cm -> convert to metres
         "maxDepthMeters": _cm_to_m(activity.get("maxDepth")),
         "avgDepthMeters": _cm_to_m(activity.get("avgDepth")),
-
         # Surface interval is ms -> convert to seconds
         "surfaceIntervalSeconds": _ms_to_s(activity.get("surfaceInterval")),
-
         "gases": extract_gases(activity),
-
         "location": activity.get("locationName"),
-
+        "temperature": extract_temperature(activity),
+        "coordinates": extract_coordinates(activity),
+        "startTimeLocal": activity.get("startTimeLocal"),
+	      "startTimeGMT": activity.get("startTimeGMT"),
         # Keep the original payload for debugging / backfills
-        "raw": activity,
     }
     return data
 
@@ -176,7 +184,6 @@ def save_dive_to_payload(activity: dict) -> None:
 
 def main() -> None:
     print("Starting Garmin dive sync")
-    print(f"PAYLOAD_URL: {PAYLOAD_URL}")
 
     # 1. Authenticate with Garmin via python-garminconnect
     client = Garmin(GARMIN_EMAIL, GARMIN_PASSWORD)

@@ -2,14 +2,15 @@ import type { CollectionConfig } from 'payload'
 
 export const GarminDives: CollectionConfig = {
   slug: 'garmin-dives',
+  defaultSort: '-startTimeGMT',
   access: {
     read: () => true,
   },
   admin: {
     useAsTitle: 'title',
-    group: 'Health',
+    group: 'Diving',
     description: 'Scuba dives imported from Garmin Connect.',
-    defaultColumns: ['startTime', 'durationSeconds', 'maxDepthMeters', 'location'],
+    defaultColumns: ['startTimeGMT', 'durationSeconds', 'maxDepthMeters', 'title', 'location'],
   },
   fields: [
     {
@@ -21,11 +22,6 @@ export const GarminDives: CollectionConfig = {
     {
       name: 'title',
       type: 'text',
-    },
-    {
-      name: 'startTime',
-      type: 'date',
-      required: true,
     },
     {
       name: 'durationSeconds',
@@ -42,6 +38,46 @@ export const GarminDives: CollectionConfig = {
     {
       name: 'location',
       type: 'text',
+    },
+    {
+      name: 'coordinates',
+      label: 'Coordinates',
+      type: 'group',
+      fields: [
+        {
+          name: 'latitude',
+          label: 'Latitude',
+          type: 'number',
+        },
+        {
+          name: 'longitude',
+          label: 'Longitude',
+          type: 'number',
+        },
+      ],
+    },
+    {
+      name: 'temperature',
+      label: 'Temperature',
+      type: 'group',
+      fields: [
+        {
+          name: 'min',
+          label: 'Min Temperature',
+          type: 'number',
+          admin: {
+            description: 'Minimum recorded temperature (°C)',
+          },
+        },
+        {
+          name: 'max',
+          label: 'Max Temperature',
+          type: 'number',
+          admin: {
+            description: 'Maximum recorded temperature (°C)',
+          },
+        },
+      ],
     },
     {
       name: 'surfaceIntervalSeconds',
@@ -73,11 +109,6 @@ export const GarminDives: CollectionConfig = {
           },
         },
       ],
-    },
-    {
-      name: 'raw',
-      type: 'json',
-      admin: { description: 'Full raw Garmin activity payload.' },
-    },
+    }
   ],
 }
