@@ -59,7 +59,7 @@ def get_last_synced_start_time() -> str | None:
     """Get the most recent dive we’ve stored in Payload."""
     resp = requests.get(
         f"{PAYLOAD_URL}/garmin-dives",
-        params={"limit": 1, "sort": "-startTime"},
+        params={"limit": 1, "sort": "-startTimeGMT"},
         headers=payload_headers(),
         timeout=60,
     )
@@ -67,7 +67,7 @@ def get_last_synced_start_time() -> str | None:
     docs = resp.json().get("docs", [])
     if not docs:
         return None
-    return docs[0]["startTime"]  # ISO string
+    return docs[0]["startTimeGMT"]  # ISO string
 
 
 def _cm_to_m(value: Any) -> float | None:
@@ -189,7 +189,7 @@ def main() -> None:
     client = Garmin(GARMIN_EMAIL, GARMIN_PASSWORD)
     client.login()  # uses garth under the hood
 
-    # 2. Decide date range: from last synced startTime (or some default) up to today
+    # 2. Decide date range: from last synced startTimeGMT (or some default) up to today
     last_start = get_last_synced_start_time()
     if last_start:
         # Re-sync the last 2 days in case of missed records
