@@ -8,12 +8,17 @@ export const Checklists: CollectionConfig = {
   admin: {
     useAsTitle: 'title',
     group: 'Checklists',
+    defaultColumns: ['title', 'description'],
   },
   fields: [
     {
       name: 'title',
       type: 'text',
       required: true,
+    },
+    {
+      name: 'description',
+      type: 'text',
     },
     {
       name: 'icon',
