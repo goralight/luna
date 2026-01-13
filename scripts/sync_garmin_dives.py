@@ -191,12 +191,8 @@ def transform_garmin_dive(activity: dict) -> dict | None:
 
 
 def save_dive_to_payload(activity: dict) -> None:
-    if not PAYLOAD_URL:
-        raise RuntimeError("PAYLOAD_URL must be set")
-
     data = transform_garmin_dive(activity)
     if data is None:
-        # Required field missing, skip
         return
 
     resp = requests.post(
@@ -205,9 +201,16 @@ def save_dive_to_payload(activity: dict) -> None:
         data=json.dumps(data),
         timeout=60,
     )
-    if resp.status_code not in (200, 201, 409):
-        print("Payload returned error:", resp.status_code, resp.text)
-        resp.raise_for_status()
+
+    if resp.status_code in (200, 201):
+        return
+
+    # Ignore duplicate-key failures on garminActivityId
+    if resp.status_code == 400 and "Value must be unique" in resp.text:
+        return
+
+    print("Payload returned error:", resp.status_code, resp.text)
+    resp.raise_for_status()
 
 
 def main() -> None:
