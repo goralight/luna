@@ -17,6 +17,7 @@ import { DayEntries } from './collections/DayEntry/index'
 import { Places } from './collections/Places'
 import { Trips } from './collections/Trips/index'
 import { Navigation } from './globals/Navigation'
+import { GarminDives } from './collections/garminDives'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -28,7 +29,17 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Checklists, ChecklistGroups, FaIcons, Media, Places, Trips, DayEntries],
+  collections: [
+    Users,
+    Checklists,
+    ChecklistGroups,
+    FaIcons,
+    Media,
+    Places,
+    Trips,
+    DayEntries,
+    GarminDives,
+  ],
   globals: [Navigation],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
