@@ -4,7 +4,7 @@ import json
 from datetime import date, timedelta
 from typing import Any
 
-import garth  # noqa: F401  # imported because garminconnect uses it under the hood
+import garth
 from garminconnect import Garmin
 import requests
 
@@ -27,6 +27,9 @@ def get_payload_token() -> str:
 
     if not PAYLOAD_USER_EMAIL or not PAYLOAD_USER_PASSWORD:
         raise RuntimeError("PAYLOAD_USER_EMAIL and PAYLOAD_USER_PASSWORD must be set")
+
+    if not PAYLOAD_URL:
+        raise RuntimeError("PAYLOAD_URL must be set")
 
     resp = requests.post(
         f"{PAYLOAD_URL}/users/login",
@@ -57,6 +60,9 @@ def payload_headers() -> dict[str, str]:
 
 def get_last_synced_start_time() -> str | None:
     """Get the most recent dive we’ve stored in Payload."""
+    if not PAYLOAD_URL:
+        raise RuntimeError("PAYLOAD_URL must be set")
+
     resp = requests.get(
         f"{PAYLOAD_URL}/garmin-dives",
         params={"limit": 1, "sort": "-startTimeGMT"},
@@ -95,6 +101,7 @@ def _pick_duration_seconds(activity: dict) -> float | None:
     Garmin dive activities often have multiple 'time' fields:
       - duration / elapsedDuration: total elapsed seconds (incl. pauses)
       - bottomTime: commonly matches what Garmin shows as dive duration in the app (moving/bottom time)
+
     We'll prefer bottomTime if present, otherwise fall back to duration.
     """
     for key in ("bottomTime", "movingDuration", "duration", "elapsedDuration"):
@@ -107,10 +114,10 @@ def _pick_duration_seconds(activity: dict) -> float | None:
             continue
     return None
 
+
 def extract_gases(activity: dict) -> list[dict]:
     gases = (
-        activity
-        .get("summarizedDiveInfo", {})
+        activity.get("summarizedDiveInfo", {})
         .get("summarizedDiveGases", [])
     )
 
@@ -133,11 +140,13 @@ def extract_gases(activity: dict) -> list[dict]:
 
     return result
 
+
 def extract_temperature(activity: dict) -> dict:
     return {
         "min": activity.get("minTemperature"),
         "max": activity.get("maxTemperature"),
     }
+
 
 def extract_coordinates(activity: dict) -> dict:
     return {
@@ -145,19 +154,16 @@ def extract_coordinates(activity: dict) -> dict:
         "longitude": activity.get("startLongitude"),
     }
 
-def transform_garmin_dive(activity: dict) -> dict:
+
+def transform_garmin_dive(activity: dict) -> dict | None:
     """
     Transform raw Garmin activity payload into the shape you want to store.
+    Returns None if required fields are missing.
 
     Conversions applied:
       - durationSeconds: prefer bottomTime (seconds), else duration (seconds)
       - maxDepthMeters/avgDepthMeters: cm -> m
       - surfaceIntervalSeconds: ms -> s
-    """
-    def transform_garmin_dive(activity: dict) -> dict | None:
-    """
-    Transform raw Garmin activity payload into the shape you want to store.
-    Returns None if required fields are missing.
     """
     start_local = activity.get("startTimeLocal")
     start_gmt = activity.get("startTimeGMT")
@@ -185,6 +191,9 @@ def transform_garmin_dive(activity: dict) -> dict:
 
 
 def save_dive_to_payload(activity: dict) -> None:
+    if not PAYLOAD_URL:
+        raise RuntimeError("PAYLOAD_URL must be set")
+
     data = transform_garmin_dive(activity)
     if data is None:
         # Required field missing, skip
@@ -203,6 +212,12 @@ def save_dive_to_payload(activity: dict) -> None:
 
 def main() -> None:
     print("Starting Garmin dive sync")
+
+    if not GARMIN_EMAIL or not GARMIN_PASSWORD:
+        raise RuntimeError("GARMIN_EMAIL and GARMIN_PASSWORD must be set")
+
+    if not PAYLOAD_URL:
+        raise RuntimeError("PAYLOAD_URL must be set")
 
     # 1. Authenticate with Garmin via python-garminconnect
     client = Garmin(GARMIN_EMAIL, GARMIN_PASSWORD)
