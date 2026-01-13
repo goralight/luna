@@ -114,14 +114,24 @@ def extract_gases(activity: dict) -> list[dict]:
         .get("summarizedDiveGases", [])
     )
 
-    return [
-        {
-            "oxygenPercent": gas.get("oxygenContent"),
-            "heliumPercent": gas.get("heliumContent"),
-        }
-        for gas in gases
-        if gas.get("oxygenContent") is not None
-    ]
+    result: list[dict] = []
+    for gas in gases:
+        oxygen = gas.get("oxygenContent")
+        if oxygen is None:
+            continue
+
+        helium = gas.get("heliumContent")
+        if helium is None:
+            helium = 0  # treat missing helium as 0%
+
+        result.append(
+            {
+                "oxygenPercent": oxygen,
+                "heliumPercent": helium,
+            }
+        )
+
+    return result
 
 def extract_temperature(activity: dict) -> dict:
     return {
@@ -144,31 +154,41 @@ def transform_garmin_dive(activity: dict) -> dict:
       - maxDepthMeters/avgDepthMeters: cm -> m
       - surfaceIntervalSeconds: ms -> s
     """
+    def transform_garmin_dive(activity: dict) -> dict | None:
+    """
+    Transform raw Garmin activity payload into the shape you want to store.
+    Returns None if required fields are missing.
+    """
+    start_local = activity.get("startTimeLocal")
+    start_gmt = activity.get("startTimeGMT")
+    if not start_local or not start_gmt:
+        # Skip activities without proper timestamps
+        return None
+
     duration_seconds = _pick_duration_seconds(activity)
 
     data = {
         "garminActivityId": str(activity["activityId"]),
         "title": activity.get("activityName"),
-        # Store seconds in seconds (Garmin gives seconds as float)
         "durationSeconds": duration_seconds,
-        # Depth fields are in cm -> convert to metres
         "maxDepthMeters": _cm_to_m(activity.get("maxDepth")),
         "avgDepthMeters": _cm_to_m(activity.get("avgDepth")),
-        # Surface interval is ms -> convert to seconds
         "surfaceIntervalSeconds": _ms_to_s(activity.get("surfaceInterval")),
         "gases": extract_gases(activity),
         "location": activity.get("locationName"),
         "temperature": extract_temperature(activity),
         "coordinates": extract_coordinates(activity),
-        "startTimeLocal": activity.get("startTimeLocal"),
-	      "startTimeGMT": activity.get("startTimeGMT"),
-        # Keep the original payload for debugging / backfills
+        "startTimeLocal": start_local,
+        "startTimeGMT": start_gmt,
     }
     return data
 
 
 def save_dive_to_payload(activity: dict) -> None:
     data = transform_garmin_dive(activity)
+    if data is None:
+        # Required field missing, skip
+        return
 
     resp = requests.post(
         f"{PAYLOAD_URL}/garmin-dives",
@@ -176,9 +196,8 @@ def save_dive_to_payload(activity: dict) -> None:
         data=json.dumps(data),
         timeout=60,
     )
-
-    # Ignore 409 / duplicate errors if unique index is hit
     if resp.status_code not in (200, 201, 409):
+        print("Payload returned error:", resp.status_code, resp.text)
         resp.raise_for_status()
 
 
