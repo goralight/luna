@@ -20,6 +20,16 @@ export const GarminDives: CollectionConfig = {
       unique: true,
     },
     {
+      name: 'startTimeLocal',
+      type: 'date',
+      required: true,
+    },
+    {
+      name: 'startTimeGMT',
+      type: 'date',
+      required: true,
+    },
+    {
       name: 'title',
       type: 'text',
     },
@@ -109,6 +119,6 @@ export const GarminDives: CollectionConfig = {
           },
         },
       ],
-    }
+    },
   ],
 }
