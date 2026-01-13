@@ -75,6 +75,7 @@ export interface Config {
     places: Place;
     trips: Trip;
     'day-entries': DayEntry;
+    'garmin-dives': GarminDive;
     search: Search;
     'payload-folders': FolderInterface;
     'payload-locked-documents': PayloadLockedDocument;
@@ -95,6 +96,7 @@ export interface Config {
     places: PlacesSelect<false> | PlacesSelect<true>;
     trips: TripsSelect<false> | TripsSelect<true>;
     'day-entries': DayEntriesSelect<false> | DayEntriesSelect<true>;
+    'garmin-dives': GarminDivesSelect<false> | GarminDivesSelect<true>;
     search: SearchSelect<false> | SearchSelect<true>;
     'payload-folders': PayloadFoldersSelect<false> | PayloadFoldersSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -169,6 +171,7 @@ export interface User {
 export interface Checklist {
   id: string;
   title: string;
+  description?: string | null;
   /**
    * Pick a Font Awesome icon
    */
@@ -407,6 +410,65 @@ export interface DayEntry {
   createdAt: string;
 }
 /**
+ * Scuba dives imported from Garmin Connect.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "garmin-dives".
+ */
+export interface GarminDive {
+  id: string;
+  garminActivityId: string;
+  /**
+   * Whether the dive is a working dive. Not ported from Garmin.
+   */
+  isWorkingDive?: boolean | null;
+  /**
+   * Select the course for this working dive.
+   */
+  workingDiveCourse?: ('ow' | 'aow' | 'drysuit' | 'deep' | 'wreck' | 'night' | 'rescue') | null;
+  /**
+   * Additional notes about the dive. Not ported from Garmin.
+   */
+  notes?: string | null;
+  startTimeLocal: string;
+  startTimeGMT: string;
+  title?: string | null;
+  durationSeconds?: number | null;
+  maxDepthMeters?: number | null;
+  avgDepthMeters?: number | null;
+  location?: string | null;
+  coordinates?: {
+    latitude?: number | null;
+    longitude?: number | null;
+  };
+  temperature?: {
+    /**
+     * Minimum recorded temperature (°C)
+     */
+    min?: number | null;
+    /**
+     * Maximum recorded temperature (°C)
+     */
+    max?: number | null;
+  };
+  surfaceIntervalSeconds?: number | null;
+  gases?:
+    | {
+        /**
+         * Oxygen percentage (O₂)
+         */
+        oxygenPercent: number;
+        /**
+         * Helium percentage (He)
+         */
+        heliumPercent: number;
+        id?: string | null;
+      }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This is a collection of automatically created search results. These results are used by the global site search and will be updated automatically as documents in the CMS are created or updated.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -470,6 +532,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'day-entries';
         value: string | DayEntry;
+      } | null)
+    | ({
+        relationTo: 'garmin-dives';
+        value: string | GarminDive;
       } | null)
     | ({
         relationTo: 'search';
@@ -550,6 +616,7 @@ export interface UsersSelect<T extends boolean = true> {
  */
 export interface ChecklistsSelect<T extends boolean = true> {
   title?: T;
+  description?: T;
   icon?: T;
   items?:
     | T
@@ -731,6 +798,45 @@ export interface DayEntriesSelect<T extends boolean = true> {
   minutesPainted?: T;
   dives?: T;
   note?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "garmin-dives_select".
+ */
+export interface GarminDivesSelect<T extends boolean = true> {
+  garminActivityId?: T;
+  isWorkingDive?: T;
+  workingDiveCourse?: T;
+  notes?: T;
+  startTimeLocal?: T;
+  startTimeGMT?: T;
+  title?: T;
+  durationSeconds?: T;
+  maxDepthMeters?: T;
+  avgDepthMeters?: T;
+  location?: T;
+  coordinates?:
+    | T
+    | {
+        latitude?: T;
+        longitude?: T;
+      };
+  temperature?:
+    | T
+    | {
+        min?: T;
+        max?: T;
+      };
+  surfaceIntervalSeconds?: T;
+  gases?:
+    | T
+    | {
+        oxygenPercent?: T;
+        heliumPercent?: T;
+        id?: T;
+      };
   updatedAt?: T;
   createdAt?: T;
 }

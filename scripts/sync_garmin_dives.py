@@ -235,7 +235,7 @@ def main() -> None:
     else:
         # First-time import: last 365 days (adjust as you like)
         print("No last synced dive found, syncing all dives from the last 365 days")
-        start_date = date.today() - timedelta(days=365)
+        start_date = date.today() - timedelta(days=780)
 
     end_date = date.today()
 
