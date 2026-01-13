@@ -235,8 +235,9 @@ def main() -> None:
         start_date = date.fromisoformat(last_start[:10]) - timedelta(days=2)
     else:
         # First-time import: last 365 days (adjust as you like)
-        print("No last synced dive found, syncing all dives from the last 365 days")
-        start_date = date.today() - timedelta(days=780)
+        days=780
+        print(f"No last synced dive found, syncing all dives from the last {days} days")
+        start_date = date.today() - timedelta(days=days)
 
     end_date = date.today()
 
@@ -253,7 +254,6 @@ def main() -> None:
 
     for act in activities:
         activity_type = (act.get("activityType", {}) or {}).get("typeKey", "").lower()
-        print('activity_type: ', activity_type)
         if "diving" not in activity_type:
             continue
         save_dive_to_payload(act)
