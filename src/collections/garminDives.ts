@@ -12,6 +12,7 @@ export const GarminDives: CollectionConfig = {
     description: 'Scuba dives imported from Garmin Connect.',
     defaultColumns: ['startTimeGMT', 'durationSeconds', 'maxDepthMeters', 'title', 'location'],
   },
+  indexes: [{ fields: ['startTimeGMT'] }, { fields: ['startTimeLocal'] }],
   fields: [
     {
       name: 'garminActivityId',
@@ -21,13 +22,15 @@ export const GarminDives: CollectionConfig = {
     },
     {
       name: 'startTimeLocal',
-      type: 'date',
+      type: 'text',
       required: true,
+      index: true,
     },
     {
       name: 'startTimeGMT',
-      type: 'date',
+      type: 'text',
       required: true,
+      index: true,
     },
     {
       name: 'title',

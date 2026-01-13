@@ -230,12 +230,16 @@ def main() -> None:
     last_start = get_last_synced_start_time()
     if last_start:
         # Re-sync the last 2 days in case of missed records
+        print(f"Last synced dive: {last_start}")
         start_date = date.fromisoformat(last_start[:10]) - timedelta(days=2)
     else:
         # First-time import: last 365 days (adjust as you like)
+        print("No last synced dive found, syncing all dives from the last 365 days")
         start_date = date.today() - timedelta(days=365)
 
     end_date = date.today()
+
+    print(f"Syncing dives from {start_date} to {end_date}")
 
     activities = client.get_activities_by_date(
         start_date.strftime("%Y-%m-%d"),
