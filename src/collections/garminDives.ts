@@ -1,4 +1,5 @@
-import type { CollectionConfig } from 'payload'
+import { isValid, parse } from 'date-fns'
+import type { CollectionConfig, Where } from 'payload'
 
 export const GarminDives: CollectionConfig = {
   slug: 'garmin-dives',
@@ -232,6 +233,74 @@ export const GarminDives: CollectionConfig = {
             percentage: ((totalDeepDives / totalDives) * 100).toFixed(1),
           },
         })
+      },
+    },
+    {
+      path: '/search',
+      method: 'get',
+      handler: async (req) => {
+        // Free‑text search (q preferred, but also accept search)
+        const rawQuery = typeof req.query?.q === 'string' ? req.query.q : ''
+
+        const search = rawQuery.trim()
+
+        // TODO: Add dive type searching once we have a way to store dive types
+        const rawDiveType = typeof req.query?.type === 'string' ? req.query.type.trim() : ''
+        const diveType = rawDiveType
+        void diveType
+
+        const DEFAULT_LIMIT = 7
+
+        const parsePositiveInt = (value: unknown, fallback: number): number => {
+          if (typeof value !== 'string') return fallback
+          const n = Number.parseInt(value, 10)
+          if (!Number.isFinite(n) || n <= 0) return fallback
+          return n
+        }
+
+        const page = parsePositiveInt(req.query?.page, 1)
+        const limit = parsePositiveInt(req.query?.limit, DEFAULT_LIMIT)
+
+        // Month-name handling for ISO date fields
+        let dateSearch = search
+        if (search !== '') {
+          const parsedShort = parse(search, 'MMM', new Date()) // jan, feb, …
+          const parsedLong = parse(search, 'MMMM', new Date()) // january, february, …
+          const monthDate = isValid(parsedShort)
+            ? parsedShort
+            : isValid(parsedLong)
+              ? parsedLong
+              : null
+
+          if (monthDate) {
+            const month = String(monthDate.getMonth() + 1).padStart(2, '0') // 01–12
+            dateSearch = `-${month}-` // matches YYYY-MM-DD for that month
+          }
+        }
+
+        const where: Where | undefined =
+          search === ''
+            ? undefined
+            : {
+                or: [
+                  // Text fields: use the raw search term
+                  { title: { like: search } },
+                  { location: { like: search } },
+                  // Date fields: use month-aware search if it resolved, else raw
+                  { startTimeLocal: { like: dateSearch } },
+                  { startTimeGMT: { like: dateSearch } },
+                ],
+              }
+
+        const result = await req.payload.find({
+          collection: 'garmin-dives',
+          sort: '-startTimeGMT',
+          page,
+          limit,
+          ...(where ? { where } : {}),
+        })
+
+        return Response.json(result)
       },
     },
   ],
