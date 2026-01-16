@@ -187,6 +187,7 @@ def transform_garmin_dive(activity: dict) -> dict | None:
         "coordinates": extract_coordinates(activity),
         "startTimeLocal": start_local,
         "startTimeGMT": start_gmt,
+        "diveType": "recreational",
     }
     return data
 

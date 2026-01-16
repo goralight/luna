@@ -77,6 +77,7 @@ export interface Config {
     'day-entries': DayEntry;
     'garmin-dives': GarminDive;
     search: Search;
+    'payload-kv': PayloadKv;
     'payload-folders': FolderInterface;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -98,6 +99,7 @@ export interface Config {
     'day-entries': DayEntriesSelect<false> | DayEntriesSelect<true>;
     'garmin-dives': GarminDivesSelect<false> | GarminDivesSelect<true>;
     search: SearchSelect<false> | SearchSelect<true>;
+    'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-folders': PayloadFoldersSelect<false> | PayloadFoldersSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -106,6 +108,7 @@ export interface Config {
   db: {
     defaultIDType: string;
   };
+  fallbackLocale: null;
   globals: {
     navigation: Navigation;
   };
@@ -419,13 +422,13 @@ export interface GarminDive {
   id: string;
   garminActivityId: string;
   /**
-   * Whether the dive is a working dive. Not ported from Garmin.
+   * What type of dive this was.
    */
-  isWorkingDive?: boolean | null;
+  diveType: 'recreational' | 'course' | 'instructing';
   /**
-   * Select the course for this working dive.
+   * Select the course when logging training or instructing dives.
    */
-  workingDiveCourse?: ('ow' | 'aow' | 'drysuit' | 'deep' | 'wreck' | 'night' | 'rescue') | null;
+  diveCourse?: ('ow' | 'aow' | 'drysuit' | 'deep' | 'wreck' | 'night' | 'rescue') | null;
   /**
    * Additional notes about the dive. Not ported from Garmin.
    */
@@ -493,6 +496,23 @@ export interface Search {
       };
   updatedAt: string;
   createdAt: string;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-kv".
+ */
+export interface PayloadKv {
+  id: string;
+  key: string;
+  data:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -807,8 +827,8 @@ export interface DayEntriesSelect<T extends boolean = true> {
  */
 export interface GarminDivesSelect<T extends boolean = true> {
   garminActivityId?: T;
-  isWorkingDive?: T;
-  workingDiveCourse?: T;
+  diveType?: T;
+  diveCourse?: T;
   notes?: T;
   startTimeLocal?: T;
   startTimeGMT?: T;
@@ -850,6 +870,14 @@ export interface SearchSelect<T extends boolean = true> {
   doc?: T;
   updatedAt?: T;
   createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "payload-kv_select".
+ */
+export interface PayloadKvSelect<T extends boolean = true> {
+  key?: T;
+  data?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

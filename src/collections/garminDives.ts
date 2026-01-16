@@ -17,8 +17,7 @@ export const GarminDives: CollectionConfig = {
     { fields: ['startTimeGMT'] },
     { fields: ['startTimeLocal'] },
     { fields: ['maxDepthMeters'] },
-    { fields: ['isWorkingDive'] },
-    { fields: ['workingDiveCourse'] },
+    { fields: ['diveType'] },
   ],
   fields: [
     {
@@ -28,16 +27,22 @@ export const GarminDives: CollectionConfig = {
       unique: true,
     },
     {
-      name: 'isWorkingDive',
-      type: 'checkbox',
-      defaultValue: false,
-      index: true,
+      name: 'diveType',
+      type: 'select',
+      required: true,
+      defaultValue: 'recreational',
+      options: [
+        { label: 'Recreational', value: 'recreational' },
+        { label: 'Course', value: 'course' },
+        { label: 'Instructing', value: 'instructing' },
+      ],
       admin: {
-        description: 'Whether the dive is a working dive. Not ported from Garmin.',
+        description: 'What type of dive this was.',
       },
+      index: true,
     },
     {
-      name: 'workingDiveCourse',
+      name: 'diveCourse',
       type: 'select',
       label: 'Diving course',
       index: true,
@@ -51,8 +56,9 @@ export const GarminDives: CollectionConfig = {
         { label: 'Rescue', value: 'rescue' },
       ],
       admin: {
-        condition: (_, siblingData) => siblingData?.isWorkingDive === true,
-        description: 'Select the course for this working dive.',
+        condition: (_, siblingData) =>
+          siblingData?.diveType === 'course' || siblingData?.diveType === 'instructing',
+        description: 'Select the course when logging training or instructing dives.',
       },
     },
     {
@@ -183,7 +189,7 @@ export const GarminDives: CollectionConfig = {
           select: {
             durationSeconds: true,
             maxDepthMeters: true,
-            isWorkingDive: true,
+            diveType: true,
           },
         })
 
@@ -192,7 +198,8 @@ export const GarminDives: CollectionConfig = {
         let totalDeepDives = 0
         let totalIntermediateDives = 0
         let totalBottomTimeSeconds = 0
-        let totalWorkingDives = 0
+        let totalInstructingDives = 0
+        let totalRecreationalDives = 0
 
         for (const dive of dives.docs) {
           totalDives += 1
@@ -208,8 +215,11 @@ export const GarminDives: CollectionConfig = {
           if (depth > intermediateDivesStartMeters) {
             totalIntermediateDives += 1
           }
-          if (dive.isWorkingDive) {
-            totalWorkingDives += 1
+          if (dive.diveType === 'instructing') {
+            totalInstructingDives += 1
+          }
+          if (dive.diveType === 'recreational') {
+            totalRecreationalDives += 1
           }
         }
 
@@ -218,9 +228,13 @@ export const GarminDives: CollectionConfig = {
           totalDives,
           deepestDepthMeters: deepestDepthMeters.toFixed(1),
           totalBottomTimeSeconds: totalBottomTimeSeconds.toFixed(0),
-          workingDives: {
-            count: totalWorkingDives,
-            percentage: ((totalWorkingDives / totalDives) * 100).toFixed(1),
+          instructingDives: {
+            count: totalInstructingDives,
+            percentage: ((totalInstructingDives / totalDives) * 100).toFixed(1),
+          },
+          recreationalDives: {
+            count: totalRecreationalDives,
+            percentage: ((totalRecreationalDives / totalDives) * 100).toFixed(1),
           },
           intermediateDives: {
             intermediateDivesStartMeters,
