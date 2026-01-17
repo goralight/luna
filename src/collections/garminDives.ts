@@ -421,10 +421,13 @@ export const GarminDives: CollectionConfig = {
 
         const search = rawQuery.trim()
 
-        // TODO: Add dive type searching once we have a way to store dive types
-        const rawDiveType = typeof req.query?.type === 'string' ? req.query.type.trim() : ''
-        const diveType = rawDiveType
-        void diveType
+        const rawDiveType = typeof req.query?.diveType === 'string' ? req.query.diveType.trim() : ''
+        const normalizedDiveType = rawDiveType.toLowerCase()
+        const validDiveTypeFilters = new Set(['course', 'instructing', 'recreational'])
+        const diveTypeFilter =
+          normalizedDiveType !== '' && validDiveTypeFilters.has(normalizedDiveType)
+            ? normalizedDiveType
+            : null
 
         const DEFAULT_LIMIT = 7
 
@@ -455,19 +458,31 @@ export const GarminDives: CollectionConfig = {
           }
         }
 
+        const filtersToApply: Where[] = []
+
+        if (search !== '') {
+          filtersToApply.push({
+            or: [
+              // Text fields: use the raw search term
+              { title: { like: search } },
+              { location: { like: search } },
+              // Date fields: use month-aware search if it resolved, else raw
+              { startTimeLocal: { like: dateSearch } },
+              { startTimeGMT: { like: dateSearch } },
+            ],
+          })
+        }
+
+        if (diveTypeFilter) {
+          filtersToApply.push({ diveType: { equals: diveTypeFilter } })
+        }
+
         const where: Where | undefined =
-          search === ''
+          filtersToApply.length === 0
             ? undefined
-            : {
-                or: [
-                  // Text fields: use the raw search term
-                  { title: { like: search } },
-                  { location: { like: search } },
-                  // Date fields: use month-aware search if it resolved, else raw
-                  { startTimeLocal: { like: dateSearch } },
-                  { startTimeGMT: { like: dateSearch } },
-                ],
-              }
+            : filtersToApply.length === 1
+              ? filtersToApply[0]
+              : { and: filtersToApply }
 
         const result = await req.payload.find({
           collection: 'garmin-dives',
