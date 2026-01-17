@@ -448,6 +448,13 @@ export interface GarminDive {
    */
   redundantCylinder?: ('none' | '3l-pony' | '6l-pony') | null;
   /**
+   * The pressure of the cylinder at the start and end of the dive. Not ported from Garmin.
+   */
+  cylinderPressure?: {
+    start?: number | null;
+    end?: number | null;
+  };
+  /**
    * Lead distribution used for the dive (kg). Not ported from Garmin.
    */
   weight?: {
@@ -869,6 +876,12 @@ export interface GarminDivesSelect<T extends boolean = true> {
         shape?: T;
       };
   redundantCylinder?: T;
+  cylinderPressure?:
+    | T
+    | {
+        start?: T;
+        end?: T;
+      };
   weight?:
     | T
     | {

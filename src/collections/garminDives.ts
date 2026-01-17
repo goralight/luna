@@ -480,5 +480,49 @@ export const GarminDives: CollectionConfig = {
         return Response.json(result)
       },
     },
+    {
+      path: '/by-date-time/:dateTime',
+      method: 'get',
+      handler: async (req) => {
+        const dateTimeFromPath =
+          (req as any)?.routeParams?.dateTime ?? (req as any)?.params?.dateTime ?? null
+        const param = typeof dateTimeFromPath === 'string' ? dateTimeFromPath.trim() : ''
+        if (param === '') {
+          return Response.json(
+            { error: 'Pass the date/time as YYYY-MM-DD_HH-MM at the end of the URL.' },
+            { status: 400 },
+          )
+        }
+
+        const match = param.match(/^(\d{4}-\d{2}-\d{2})_(\d{2})-(\d{2})$/)
+        if (!match) {
+          return Response.json(
+            { error: 'Invalid format. Use YYYY-MM-DD_HH-MM (example: 2025-12-24_10-22).' },
+            { status: 400 },
+          )
+        }
+
+        const [, datePart, hourPart, minutePart] = match
+        const lookup = `${datePart} ${hourPart}:${minutePart}`
+
+        const result = await req.payload.find({
+          collection: 'garmin-dives',
+          limit: 1,
+          pagination: false,
+          where: {
+            startTimeLocal: {
+              like: lookup,
+            },
+          },
+        })
+
+        const dive = result.docs?.[0]
+        if (!dive) {
+          return Response.json({ error: `No dive found for ${param}.` }, { status: 404 })
+        }
+
+        return Response.json(dive)
+      },
+    },
   ],
 }
