@@ -151,6 +151,24 @@ export const GarminDives: CollectionConfig = {
       },
     },
     {
+      name: 'cylinderPressure',
+      label: 'Cylinder Pressure (bar)',
+      admin: {
+        description: 'The pressure of the cylinder at the start and end of the dive. Not ported from Garmin.',
+      },
+      type: 'group',
+      fields: [
+        {
+          name: 'start',
+          type: 'number',
+        },
+        {
+          name: 'end',
+          type: 'number',
+        },
+      ],
+    },
+    {
       name: 'weight',
       label: 'Weight',
       type: 'group',
