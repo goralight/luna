@@ -49,10 +49,6 @@ export const GarminDives: CollectionConfig = {
       unique: true,
     },
     {
-      name: 'title',
-      type: 'text',
-    },
-    {
       name: 'diveType',
       type: 'select',
       required: true,
@@ -232,19 +228,8 @@ export const GarminDives: CollectionConfig = {
       required: true,
     },
     {
-      name: 'cylinderPressure',
-      label: 'Cylinder Pressure',
-      type: 'group',
-      fields: [
-        {
-          name: 'start',
-          type: 'number',
-        },
-        {
-          name: 'end',
-          type: 'number',
-        },
-      ],
+      name: 'title',
+      type: 'text',
     },
     {
       name: 'durationSeconds',

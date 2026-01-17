@@ -8,12 +8,6 @@ import garth
 from garminconnect import Garmin
 import requests
 
-try:
-    from garmin_fit_sdk import Decoder, Stream
-except ImportError:  # pragma: no cover - optional dependency
-    Decoder = None
-    Stream = None
-
 PAYLOAD_URL = os.getenv("PAYLOAD_URL")
 GARMIN_EMAIL = os.getenv("GARMIN_EMAIL")
 GARMIN_PASSWORD = os.getenv("GARMIN_PASSWORD")
@@ -198,104 +192,10 @@ def transform_garmin_dive(activity: dict) -> dict | None:
     return data
 
 
-PRESSURE_FIELD_CANDIDATES = (
-    "tank_pressure",
-    "cylinder_pressure",
-    "gas_pressure",
-    "absolute_pressure",
-)
-
-
-def _download_fit_activity(client: Garmin, activity_id: int) -> bytes | None:
-    if Decoder is None or Stream is None:
-        raise RuntimeError(
-            "garmin-fit-sdk is required to parse FIT files. Install with `pip install garmin-fit-sdk`."
-        )
-
-    try:
-        return client.download_activity(
-            activity_id,
-            dl_fmt=client.ActivityDownloadFormat.FIT,
-        )
-    except Exception as exc:
-        print(f"Failed to download FIT for activity {activity_id}: {exc}")
-        return None
-
-
-def _extract_cylinder_pressures(fit_blob: bytes) -> tuple[float | None, float | None]:
-    try:
-        stream = Stream.from_bytes(fit_blob)
-        decoder = Decoder(stream)
-        messages, errors = decoder.read()
-    except Exception as exc:  # pragma: no cover - defensive
-        print(f"Unable to decode FIT data: {exc}")
-        return None, None
-
-    if errors:
-        print(f"FIT decode warnings: {errors}")
-
-    start_pressure: float | None = None
-    end_pressure: float | None = None
-
-    for message in messages:
-        if message.name != "record":
-            continue
-
-        fields = {field.name: field.value for field in message.fields}
-        for developer_field in message.developer_fields:
-            name = developer_field.name
-            if name:
-                fields.setdefault(name, developer_field.value)
-
-        pressure_value = next(
-            (fields.get(key) for key in PRESSURE_FIELD_CANDIDATES if fields.get(key) is not None),
-            None,
-        )
-
-        if pressure_value is None:
-            continue
-
-        try:
-            pressure_float = float(pressure_value)
-        except (TypeError, ValueError):
-            continue
-
-        if start_pressure is None:
-            start_pressure = pressure_float
-        end_pressure = pressure_float
-
-    return start_pressure, end_pressure
-
-
-def fetch_fit_metrics(client: Garmin, activity: dict) -> dict:
-    activity_id = activity.get("activityId")
-    if activity_id is None:
-        return {}
-
-    fit_data = _download_fit_activity(client, int(activity_id))
-    print(f"Fit data for activity {activity_id}: {fit_data}")
-    if not fit_data:
-        return {}
-
-    start_pressure, end_pressure = _extract_cylinder_pressures(fit_data)
-    if start_pressure is None and end_pressure is None:
-        return {}
-
-    return {
-        "cylinderPressure": {
-            "start": start_pressure,
-            "end": end_pressure,
-        }
-    }
-
-
-def save_dive_to_payload(activity: dict, extra_fields: dict | None = None) -> None:
+def save_dive_to_payload(activity: dict) -> None:
     data = transform_garmin_dive(activity)
     if data is None:
         return
-
-    if extra_fields:
-        data.update(extra_fields)
 
     resp = requests.post(
         f"{PAYLOAD_URL}/garmin-dives",
@@ -336,7 +236,7 @@ def main() -> None:
         start_date = date.fromisoformat(last_start[:10]) - timedelta(days=2)
     else:
         # First-time import: last 365 days (adjust as you like)
-        days=50
+        days=780
         print(f"No last synced dive found, syncing all dives from the last {days} days")
         start_date = date.today() - timedelta(days=days)
 
@@ -357,12 +257,7 @@ def main() -> None:
         activity_type = (act.get("activityType", {}) or {}).get("typeKey", "").lower()
         if "diving" not in activity_type:
             continue
-        extra_fields = {}
-        try:
-            extra_fields = fetch_fit_metrics(client, act)
-        except RuntimeError as exc:
-            print(f"Skipping FIT metrics: {exc}")
-        save_dive_to_payload(act, extra_fields)
+        save_dive_to_payload(act)
 
 
 if __name__ == "__main__":
