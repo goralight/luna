@@ -10,7 +10,7 @@ export const GarminDives: CollectionConfig = {
   admin: {
     useAsTitle: 'title',
     group: 'Diving',
-    description: 'Scuba dives imported from Garmin Connect.',
+    description: 'Scuba dives imported from Garmin Connect. Some fields are not ported from Garmin. These are marked with "Not ported from Garmin."',
     defaultColumns: ['startTimeGMT', 'durationSeconds', 'maxDepthMeters', 'title', 'location'],
   },
   indexes: [
@@ -19,6 +19,28 @@ export const GarminDives: CollectionConfig = {
     { fields: ['maxDepthMeters'] },
     { fields: ['diveType'] },
   ],
+  hooks: {
+    beforeValidate: [
+      ({ data, originalDoc }) => {
+        const diveType =
+          (data?.diveType as string | undefined) ?? (originalDoc?.diveType as string | undefined)
+        if (diveType === 'recreational' && data) {
+          const mutableData = data as Record<string, unknown>
+          delete mutableData.diveCourse
+        }
+      },
+    ],
+    afterRead: [
+      ({ doc }) => {
+        if ((doc?.diveType as string | undefined) === 'recreational') {
+          const mutableDoc = doc as Record<string, unknown>
+          delete mutableDoc.diveCourse
+          return mutableDoc
+        }
+        return doc
+      },
+    ],
+  },
   fields: [
     {
       name: 'garminActivityId',
@@ -37,15 +59,13 @@ export const GarminDives: CollectionConfig = {
         { label: 'Instructing', value: 'instructing' },
       ],
       admin: {
-        description: 'What type of dive this was.',
+        description: 'What type of dive this was. Not ported from Garmin.',
       },
-      index: true,
     },
     {
       name: 'diveCourse',
       type: 'select',
       label: 'Diving course',
-      index: true,
       options: [
         { label: 'OW', value: 'ow' },
         { label: 'AOW', value: 'aow' },
@@ -58,7 +78,7 @@ export const GarminDives: CollectionConfig = {
       admin: {
         condition: (_, siblingData) =>
           siblingData?.diveType === 'course' || siblingData?.diveType === 'instructing',
-        description: 'Select the course when logging training or instructing dives.',
+        description: 'Select the course when logging training or instructing dives. Not ported from Garmin.',
       },
     },
     {
@@ -70,16 +90,142 @@ export const GarminDives: CollectionConfig = {
       },
     },
     {
+      name: 'cylinder',
+      type: 'group',
+      label: 'Cylinder',
+      defaultValue: {
+        selection: '12l',
+        shape: 'long',
+      },
+      fields: [
+        {
+          name: 'type',
+          type: 'select',
+          label: 'Cylinder',
+          defaultValue: '12l',
+          options: [
+            { label: '12L', value: '12l' },
+            { label: '15L', value: '15l' },
+            { label: '10L', value: '10l' },
+            { label: 'Twin-set 12L', value: 'twin-set-12l' },
+            { label: 'Twin-set 10L', value: 'twin-set-10l' },
+            { label: 'Twin-set 8L', value: 'twin-set-8l' },
+
+          ],
+          admin: {
+            description: 'Select the cylinder used for the dive. Not ported from Garmin.',
+          },
+        },
+        {
+          name: 'shape',
+          type: 'select',
+          label: 'Cylinder Shape',
+          defaultValue: 'long',
+          options: [
+            { label: 'Long', value: 'long' },
+            { label: 'Dumpy', value: 'dumpy' },
+          ],
+          admin: {
+            condition: (_, siblingData: { selection?: string } | null | undefined) => {
+              const selectedCylinder = siblingData?.selection
+              return selectedCylinder === '12l' || selectedCylinder === '15l' || selectedCylinder === '10l'
+            },
+            description: 'Select the shape of the cylinder used for the dive. Not ported from Garmin.',
+          },
+        },
+      ],
+    },
+    {
+      name: 'redundantCylinder',
+      type: 'select',
+      label: 'Redundant Cylinder',
+      defaultValue: 'none',
+      options: [
+        { label: 'None', value: 'none' },
+        { label: '3L Pony', value: '3l-pony' },
+        { label: '6L Pony', value: '6l-pony' },
+
+      ],
+      admin: {
+        description: 'Select the redundant cylinder used for the dive. Not ported from Garmin.',
+      },
+    },
+    {
+      name: 'weight',
+      label: 'Weight',
+      type: 'group',
+      admin: {
+        description: 'Lead distribution used for the dive (kg). Not ported from Garmin.',
+      },
+      fields: [
+        {
+          name: 'trim',
+          type: 'group',
+          fields: [
+            {
+              name: 'leftKg',
+              type: 'number',
+              min: 0,
+              defaultValue: 1,
+            },
+            {
+              name: 'rightKg',
+              type: 'number',
+              min: 0,
+              defaultValue: 1,
+            },
+          ],
+        },
+        {
+          name: 'pouch',
+          type: 'group',
+          fields: [
+            {
+              name: 'leftKg',
+              type: 'number',
+              min: 0,
+              defaultValue: 3,
+            },
+            {
+              name: 'rightKg',
+              type: 'number',
+              min: 0,
+              defaultValue: 3,
+            },
+          ],
+        },
+        {
+          name: 'beltKg',
+          label: 'Belt Weight Kg',
+          type: 'number',
+          min: 0,
+          defaultValue: 0,
+        },
+      ],
+    },
+    {
+      name: 'exposureProtection',
+      type: 'select',
+      label: 'Exposure Protection',
+      defaultValue: 'Santi E.Lite Drysuit',
+      options: [
+        { label: 'None', value: 'none' },
+        { label: 'Santi E.Lite Drysuit', value: 'Santi E.Lite Drysuit' },
+        { label: '5mm Beuchat Wetsuit', value: '5mm Beuchat Wetsuit' },
+      ],
+      admin: {
+        description: 'Select the exposure protection used for the dive. Not ported from Garmin.',
+      },
+    },
+    {
       name: 'startTimeLocal',
       type: 'text',
       required: true,
-      index: true,
     },
     {
       name: 'startTimeGMT',
       type: 'text',
       required: true,
-      index: true,
     },
     {
       name: 'title',
@@ -92,7 +238,6 @@ export const GarminDives: CollectionConfig = {
     {
       name: 'maxDepthMeters',
       type: 'number',
-      index: true,
     },
     {
       name: 'avgDepthMeters',

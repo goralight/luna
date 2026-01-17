@@ -413,7 +413,7 @@ export interface DayEntry {
   createdAt: string;
 }
 /**
- * Scuba dives imported from Garmin Connect.
+ * Scuba dives imported from Garmin Connect. Some fields are not ported from Garmin. These are marked with "Not ported from Garmin."
  *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "garmin-dives".
@@ -422,17 +422,49 @@ export interface GarminDive {
   id: string;
   garminActivityId: string;
   /**
-   * What type of dive this was.
+   * What type of dive this was. Not ported from Garmin.
    */
   diveType: 'recreational' | 'course' | 'instructing';
   /**
-   * Select the course when logging training or instructing dives.
+   * Select the course when logging training or instructing dives. Not ported from Garmin.
    */
   diveCourse?: ('ow' | 'aow' | 'drysuit' | 'deep' | 'wreck' | 'night' | 'rescue') | null;
   /**
    * Additional notes about the dive. Not ported from Garmin.
    */
   notes?: string | null;
+  cylinder?: {
+    /**
+     * Select the cylinder used for the dive. Not ported from Garmin.
+     */
+    type?: ('12l' | '15l' | '10l' | 'twin-set-12l' | 'twin-set-10l' | 'twin-set-8l') | null;
+    /**
+     * Select the shape of the cylinder used for the dive. Not ported from Garmin.
+     */
+    shape?: ('long' | 'dumpy') | null;
+  };
+  /**
+   * Select the redundant cylinder used for the dive. Not ported from Garmin.
+   */
+  redundantCylinder?: ('none' | '3l-pony' | '6l-pony') | null;
+  /**
+   * Lead distribution used for the dive (kg). Not ported from Garmin.
+   */
+  weight?: {
+    trim?: {
+      leftKg?: number | null;
+      rightKg?: number | null;
+    };
+    pouch?: {
+      leftKg?: number | null;
+      rightKg?: number | null;
+    };
+    beltKg?: number | null;
+  };
+  /**
+   * Select the exposure protection used for the dive. Not ported from Garmin.
+   */
+  exposureProtection?: ('none' | 'Santi E.Lite Drysuit' | '5mm Beuchat Wetsuit') | null;
   startTimeLocal: string;
   startTimeGMT: string;
   title?: string | null;
@@ -830,6 +862,31 @@ export interface GarminDivesSelect<T extends boolean = true> {
   diveType?: T;
   diveCourse?: T;
   notes?: T;
+  cylinder?:
+    | T
+    | {
+        type?: T;
+        shape?: T;
+      };
+  redundantCylinder?: T;
+  weight?:
+    | T
+    | {
+        trim?:
+          | T
+          | {
+              leftKg?: T;
+              rightKg?: T;
+            };
+        pouch?:
+          | T
+          | {
+              leftKg?: T;
+              rightKg?: T;
+            };
+        beltKg?: T;
+      };
+  exposureProtection?: T;
   startTimeLocal?: T;
   startTimeGMT?: T;
   title?: T;
