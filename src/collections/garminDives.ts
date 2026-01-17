@@ -1,5 +1,10 @@
 import { isValid, parse } from 'date-fns'
 import type { CollectionConfig, Where } from 'payload'
+import type { GarminDive } from '../payload-types'
+
+type AdjacentDiveSummary = {
+  startTimeLocal: string
+}
 
 export const GarminDives: CollectionConfig = {
   slug: 'garmin-dives',
@@ -531,12 +536,61 @@ export const GarminDives: CollectionConfig = {
           },
         })
 
-        const dive = result.docs?.[0]
+        const dive = result.docs?.[0] as GarminDive | undefined
         if (!dive) {
           return Response.json({ error: `No dive found for ${param}.` }, { status: 404 })
         }
 
-        return Response.json(dive)
+        const currentStartTimeLocal = dive.startTimeLocal.trim()
+
+        let previousDive: AdjacentDiveSummary | null = null
+        let nextDive: AdjacentDiveSummary | null = null
+
+        if (currentStartTimeLocal.length > 0) {
+          const [youngerResult, olderResult] = await Promise.all([
+            req.payload.find({
+              collection: 'garmin-dives',
+              limit: 1,
+              pagination: false,
+              sort: 'startTimeLocal',
+              where: {
+                startTimeLocal: {
+                  greater_than: currentStartTimeLocal,
+                },
+              },
+            }),
+            req.payload.find({
+              collection: 'garmin-dives',
+              limit: 1,
+              pagination: false,
+              sort: '-startTimeLocal',
+              where: {
+                startTimeLocal: {
+                  less_than: currentStartTimeLocal,
+                },
+              },
+            }),
+          ])
+
+          const toSummary = (diveCandidate: GarminDive | undefined): AdjacentDiveSummary | null => {
+            if (typeof diveCandidate?.startTimeLocal !== 'string') return null
+            const trimmed = diveCandidate.startTimeLocal.trim()
+            return trimmed === '' ? null : { startTimeLocal: trimmed }
+          }
+
+          const youngerDive = youngerResult?.docs?.[0] as GarminDive | undefined
+          const olderDive = olderResult?.docs?.[0] as GarminDive | undefined
+
+          previousDive = toSummary(youngerDive)
+          nextDive = toSummary(olderDive)
+        }
+
+        const diveWithAdjacents: GarminDive & {
+          previousDive: AdjacentDiveSummary | null
+          nextDive: AdjacentDiveSummary | null
+        } = { ...dive, previousDive, nextDive }
+
+        return Response.json(diveWithAdjacents)
       },
     },
   ],
