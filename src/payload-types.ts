@@ -421,6 +421,7 @@ export interface DayEntry {
 export interface GarminDive {
   id: string;
   garminActivityId: string;
+  title?: string | null;
   /**
    * What type of dive this was. Not ported from Garmin.
    */
@@ -467,7 +468,10 @@ export interface GarminDive {
   exposureProtection?: ('none' | 'Santi E.Lite Drysuit' | '5mm Beuchat Wetsuit') | null;
   startTimeLocal: string;
   startTimeGMT: string;
-  title?: string | null;
+  cylinderPressure?: {
+    start?: number | null;
+    end?: number | null;
+  };
   durationSeconds?: number | null;
   maxDepthMeters?: number | null;
   avgDepthMeters?: number | null;
@@ -859,6 +863,7 @@ export interface DayEntriesSelect<T extends boolean = true> {
  */
 export interface GarminDivesSelect<T extends boolean = true> {
   garminActivityId?: T;
+  title?: T;
   diveType?: T;
   diveCourse?: T;
   notes?: T;
@@ -889,7 +894,12 @@ export interface GarminDivesSelect<T extends boolean = true> {
   exposureProtection?: T;
   startTimeLocal?: T;
   startTimeGMT?: T;
-  title?: T;
+  cylinderPressure?:
+    | T
+    | {
+        start?: T;
+        end?: T;
+      };
   durationSeconds?: T;
   maxDepthMeters?: T;
   avgDepthMeters?: T;
