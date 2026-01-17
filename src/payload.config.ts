@@ -17,7 +17,7 @@ import { DayEntries } from './collections/DayEntry/index'
 import { Places } from './collections/Places'
 import { Trips } from './collections/Trips/index'
 import { Navigation } from './globals/Navigation'
-import { GarminDives } from './collections/garminDives'
+import { GarminDives } from './collections/garminDives/index'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
