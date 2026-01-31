@@ -13,13 +13,14 @@ export const GarminDives: CollectionConfig = {
     group: 'Diving',
     description:
       'Scuba dives imported from Garmin Connect. Some fields are not ported from Garmin. These are marked with "Not ported from Garmin."',
-    defaultColumns: ['startTimeGMT', 'durationSeconds', 'maxDepthMeters', 'title', 'location'],
+    defaultColumns: ['diveNumber', 'startTimeGMT', 'durationSeconds', 'maxDepthMeters', 'title', 'location'],
   },
   indexes: [
     { fields: ['startTimeGMT'] },
     { fields: ['startTimeLocal'] },
     { fields: ['maxDepthMeters'] },
     { fields: ['diveType'] },
+    { fields: ['diveNumber'] },
   ],
   hooks: {
     beforeValidate: [

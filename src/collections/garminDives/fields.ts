@@ -8,6 +8,13 @@ export const garminDiveFields: Field[] = [
     unique: true,
   },
   {
+    name: 'diveNumber',
+    type: 'text',
+    admin: {
+      description: 'Dive number. Not ported from Garmin.',
+    },
+  },
+  {
     name: 'diveType',
     type: 'select',
     required: true,
@@ -55,8 +62,22 @@ export const garminDiveFields: Field[] = [
     defaultValue: {
       selection: '12l',
       shape: 'long',
+      material: 'steel',
     },
     fields: [
+      {
+        name: 'material',
+        type: 'select',
+        label: 'Material',
+        defaultValue: 'steel',
+        options: [
+          { label: 'Steel', value: 'steel' },
+          { label: 'Aluminum', value: 'aluminum' },
+        ],
+        admin: {
+          description: 'Select the material of the cylinder. Not ported from Garmin.',
+        },
+      },
       {
         name: 'type',
         type: 'select',
