@@ -213,6 +213,7 @@ export const garminDiveFields: Field[] = [
       description: 'Select the exposure protection used for the dive. Not ported from Garmin.',
     },
   },
+
   {
     name: 'startTimeLocal',
     type: 'text',
@@ -242,6 +243,19 @@ export const garminDiveFields: Field[] = [
   {
     name: 'location',
     type: 'text',
+  },
+  {
+    name: 'waterType',
+    type: 'select',
+    label: 'Water Type',
+    defaultValue: 'fresh',
+    options: [
+      { label: 'Salt', value: 'salt' },
+      { label: 'Fresh', value: 'fresh' },
+    ],
+    admin: {
+      description: 'Type of water (salt or fresh). Not ported from Garmin.',
+    },
   },
   {
     name: 'coordinates',
