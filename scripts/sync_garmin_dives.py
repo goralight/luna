@@ -4,13 +4,14 @@ import json
 from datetime import date, timedelta
 from typing import Any
 
-import garth
 from garminconnect import Garmin
 import requests
 
 PAYLOAD_URL = os.getenv("PAYLOAD_URL")
 GARMIN_EMAIL = os.getenv("GARMIN_EMAIL")
 GARMIN_PASSWORD = os.getenv("GARMIN_PASSWORD")
+# Long base64 session from Garth (see python-garminconnect / GARMINTOKENS). Avoids SSO on every run.
+GARMINTOKENS = os.getenv("GARMINTOKENS", "").strip()
 PAYLOAD_USER_EMAIL = os.getenv("PAYLOAD_USER_EMAIL")
 PAYLOAD_USER_PASSWORD = os.getenv("PAYLOAD_USER_PASSWORD")
 
@@ -218,15 +219,24 @@ def save_dive_to_payload(activity: dict) -> None:
 def main() -> None:
     print("Starting Garmin dive sync")
 
-    if not GARMIN_EMAIL or not GARMIN_PASSWORD:
-        raise RuntimeError("GARMIN_EMAIL and GARMIN_PASSWORD must be set")
+    has_password_login = bool(GARMIN_EMAIL and GARMIN_PASSWORD)
+    # garminconnect treats values longer than 512 chars as embedded token data (not a path).
+    has_token_login = len(GARMINTOKENS) > 512
+
+    if not has_password_login and not has_token_login:
+        raise RuntimeError(
+            "Set GARMIN_EMAIL and GARMIN_PASSWORD, or set GARMINTOKENS to a Garth "
+            "session string (e.g. garmin.garth.dumps() after one local login)."
+        )
 
     if not PAYLOAD_URL:
         raise RuntimeError("PAYLOAD_URL must be set")
 
-    # 1. Authenticate with Garmin via python-garminconnect
-    client = Garmin(GARMIN_EMAIL, GARMIN_PASSWORD)
-    client.login()  # uses garth under the hood
+    # 1. Authenticate: prefer GARMINTOKENS (no SSO); password login hits Garmin rate limits on CI IPs.
+    email = GARMIN_EMAIL if has_password_login else None
+    password = GARMIN_PASSWORD if has_password_login else None
+    client = Garmin(email, password)
+    client.login()
 
     # 2. Decide date range: from last synced startTimeGMT (or some default) up to today
     last_start = get_last_synced_start_time()

@@ -9,6 +9,9 @@
 /.idea/*
 !/.idea/runConfigurations
 
+# python
+/.venv-garmin
+
 # testing
 /coverage
 

@@ -23,8 +23,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install garth garminconnect requests
+      # Garmin often returns 429 on full SSO login from shared CI IPs. Prefer a stored Garth session:
+      # locally: python -c "from garminconnect import Garmin; g=Garmin('you@example.com','pw'); g.login(); print(g.garth.dumps())"
+      # paste output into repo secret GARMIN_TOKENS (refresh yearly or when sync fails with auth errors).
       - name: Run Garmin dive sync
         env:
+          GARMINTOKENS: ${{ secrets.GARMIN_TOKENS }}
           GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
           GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
           PAYLOAD_URL: ${{ secrets.PAYLOAD_URL }}
