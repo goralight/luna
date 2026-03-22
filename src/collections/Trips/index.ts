@@ -102,8 +102,18 @@ export const Trips: CollectionConfig = {
     },
     {
       name: 'description',
-      type: 'textarea',
-      required: true,
+      type: 'array',
+      minRows: 1,
+      fields: [
+        {
+          name: 'paragraph',
+          type: 'textarea',
+          required: true,
+        }
+      ],
+      admin: {
+        description: 'Separate each paragraph of your trip description. Each text area becomes its own <p> tag.',
+      },
     },
     {
       name: 'favoriteMemory',

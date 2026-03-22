@@ -350,7 +350,15 @@ export interface Trip {
         id?: string | null;
       }[]
     | null;
-  description: string;
+  /**
+   * Separate each paragraph of your trip description. Each text area becomes its own <p> tag.
+   */
+  description?:
+    | {
+        paragraph: string;
+        id?: string | null;
+      }[]
+    | null;
   favoriteMemory?: string | null;
   accommodation?: string | null;
   weather?: string | null;
@@ -422,6 +430,10 @@ export interface GarminDive {
   id: string;
   garminActivityId: string;
   /**
+   * Dive number. Not ported from Garmin.
+   */
+  diveNumber?: string | null;
+  /**
    * What type of dive this was. Not ported from Garmin.
    */
   diveType: 'recreational' | 'course' | 'instructing';
@@ -434,6 +446,10 @@ export interface GarminDive {
    */
   notes?: string | null;
   cylinder?: {
+    /**
+     * Select the material of the cylinder. Not ported from Garmin.
+     */
+    material?: ('steel' | 'aluminum') | null;
     /**
      * Select the cylinder used for the dive. Not ported from Garmin.
      */
@@ -479,6 +495,10 @@ export interface GarminDive {
   maxDepthMeters?: number | null;
   avgDepthMeters?: number | null;
   location?: string | null;
+  /**
+   * Type of water (salt or fresh). Not ported from Garmin.
+   */
+  waterType?: ('salt' | 'fresh') | null;
   coordinates?: {
     latitude?: number | null;
     longitude?: number | null;
@@ -795,7 +815,12 @@ export interface TripsSelect<T extends boolean = true> {
         image?: T;
         id?: T;
       };
-  description?: T;
+  description?:
+    | T
+    | {
+        paragraph?: T;
+        id?: T;
+      };
   favoriteMemory?: T;
   accommodation?: T;
   weather?: T;
@@ -866,12 +891,14 @@ export interface DayEntriesSelect<T extends boolean = true> {
  */
 export interface GarminDivesSelect<T extends boolean = true> {
   garminActivityId?: T;
+  diveNumber?: T;
   diveType?: T;
   diveCourse?: T;
   notes?: T;
   cylinder?:
     | T
     | {
+        material?: T;
         type?: T;
         shape?: T;
       };
@@ -907,6 +934,7 @@ export interface GarminDivesSelect<T extends boolean = true> {
   maxDepthMeters?: T;
   avgDepthMeters?: T;
   location?: T;
+  waterType?: T;
   coordinates?:
     | T
     | {
