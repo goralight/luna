@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 import os
 import json
+import time
 from datetime import date, timedelta
 from typing import Any
 
-from garminconnect import Garmin
+from garminconnect import Garmin, GarminConnectTooManyRequestsError
 import requests
 
 PAYLOAD_URL = os.getenv("PAYLOAD_URL")
@@ -216,11 +217,42 @@ def save_dive_to_payload(activity: dict) -> None:
     resp.raise_for_status()
 
 
+# Retry delays (seconds) when Garmin's API returns 429.
+# Garmin rate-limits CI IP ranges on the OAuth2 exchange endpoint;
+# waiting and retrying is the only reliable workaround.
+_RETRY_DELAYS = [120, 300, 900]  # 2 min, 5 min, 15 min
+
+
+def get_activities_with_retry(client: Garmin, start: date, end: date) -> list:
+    """
+    Fetch activities from Garmin, retrying up to len(_RETRY_DELAYS) times on 429.
+    The first request often triggers an OAuth2 refresh from CI IPs; backing off
+    long enough for the rate-limit window to reset is the only reliable fix.
+    """
+    last_exc: Exception | None = None
+    for attempt, delay in enumerate([0] + _RETRY_DELAYS):
+        if delay:
+            print(
+                f"Rate limited by Garmin — waiting {delay}s before retry "
+                f"({attempt}/{len(_RETRY_DELAYS)})..."
+            )
+            time.sleep(delay)
+        try:
+            return client.get_activities_by_date(
+                start.strftime("%Y-%m-%d"),
+                end.strftime("%Y-%m-%d"),
+            )
+        except GarminConnectTooManyRequestsError as exc:
+            print(f"Rate limited (attempt {attempt + 1}): {exc}")
+            last_exc = exc
+
+    raise last_exc  # type: ignore[misc]
+
+
 def main() -> None:
     print("Starting Garmin dive sync")
 
     has_password_login = bool(GARMIN_EMAIL and GARMIN_PASSWORD)
-    # garminconnect treats values longer than 512 chars as embedded token data (not a path).
     has_token_login = len(GARMINTOKENS) > 512
 
     if not has_password_login and not has_token_login:
@@ -232,11 +264,17 @@ def main() -> None:
     if not PAYLOAD_URL:
         raise RuntimeError("PAYLOAD_URL must be set")
 
-    # 1. Authenticate: prefer GARMINTOKENS (no SSO); password login hits Garmin rate limits on CI IPs.
-    email = GARMIN_EMAIL if has_password_login else None
-    password = GARMIN_PASSWORD if has_password_login else None
-    client = Garmin(email, password)
-    client.login()
+    # 1. Authenticate.
+    #    Prefer GARMINTOKENS: load the serialised Garth session directly so we
+    #    never hit the SSO endpoint (which is what causes 429 on shared CI IPs).
+    #    garth will still refresh the OAuth2 token automatically on the first API
+    #    call if it has expired, but that exchange is retried below.
+    if has_token_login:
+        client = Garmin()
+        client.garth.loads(GARMINTOKENS)
+    else:
+        client = Garmin(GARMIN_EMAIL, GARMIN_PASSWORD)
+        client.login()
 
     # 2. Decide date range: from last synced startTimeGMT (or some default) up to today
     last_start = get_last_synced_start_time()
@@ -246,7 +284,7 @@ def main() -> None:
         start_date = date.fromisoformat(last_start[:10]) - timedelta(days=2)
     else:
         # First-time import: last 365 days (adjust as you like)
-        days=780
+        days = 780
         print(f"No last synced dive found, syncing all dives from the last {days} days")
         start_date = date.today() - timedelta(days=days)
 
@@ -254,10 +292,7 @@ def main() -> None:
 
     print(f"Syncing dives from {start_date} to {end_date}")
 
-    activities = client.get_activities_by_date(
-        start_date.strftime("%Y-%m-%d"),
-        end_date.strftime("%Y-%m-%d"),
-    )
+    activities = get_activities_with_retry(client, start_date, end_date)
 
     # 3. Filter scuba diving activities and push to Payload
     print(f"Found {len(activities)} activities")
