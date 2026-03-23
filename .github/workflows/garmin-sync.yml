@@ -23,17 +23,35 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install garth garminconnect requests
-      # Garmin often returns 429 on full SSO login from shared CI IPs. Prefer a stored Garth session:
-      # locally: python -c "from garminconnect import Garmin; g=Garmin('you@example.com','pw'); g.login(); print(g.garth.dumps())"
-      # paste output into repo secret GARMIN_TOKENS (refresh yearly or when sync fails with auth errors).
+
+      # Restore the garth session written by the previous run.
+      # Falls back to the GARMIN_TOKENS secret on the first run or after cache eviction.
+      # The key changes each run so the cache is always updated; restore-keys matches
+      # the most recent entry by prefix.
+      - name: Restore Garmin session cache
+        uses: actions/cache/restore@v4
+        with:
+          path: /tmp/garmin_session
+          key: garmin-session-${{ github.run_id }}
+          restore-keys: |
+            garmin-session-
+
       - name: Run Garmin dive sync
         env:
           GARMINTOKENS: ${{ secrets.GARMIN_TOKENS }}
           GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
           GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
+          GARMIN_SESSION_FILE: /tmp/garmin_session
           PAYLOAD_URL: ${{ secrets.PAYLOAD_URL }}
           PAYLOAD_USER_EMAIL: ${{ secrets.PAYLOAD_USER_EMAIL }}
           PAYLOAD_USER_PASSWORD: ${{ secrets.PAYLOAD_USER_PASSWORD }}
-
         run: |
           python scripts/sync_garmin_dives.py
+
+      # Save the refreshed session so the next run can skip SSO/OAuth2 exchange.
+      - name: Save Garmin session cache
+        if: success()
+        uses: actions/cache/save@v4
+        with:
+          path: /tmp/garmin_session
+          key: garmin-session-${{ github.run_id }}
