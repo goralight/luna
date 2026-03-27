@@ -5,7 +5,7 @@ import time
 from datetime import date, timedelta
 from typing import Any
 
-from garminconnect import Garmin, GarminConnectTooManyRequestsError
+from garminconnect import Garmin, GarminConnectConnectionError, GarminConnectTooManyRequestsError
 import requests
 
 PAYLOAD_URL = os.getenv("PAYLOAD_URL")
@@ -219,10 +219,14 @@ def save_dive_to_payload(activity: dict) -> None:
     resp.raise_for_status()
 
 
-# Retry delays (seconds) for Garmin 429 errors.
+# Retry delays (seconds) for Garmin 429 / timeout errors.
 # Garmin rate-limits CI IP ranges on both the SSO and OAuth2 exchange endpoints.
-_SSO_RETRY_DELAYS = [120, 300, 600, 1200]   # 2 min, 5 min, 10 min, 20 min
-_API_RETRY_DELAYS = [120, 300, 900]          # 2 min, 5 min, 15 min
+# Delays are intentionally long — the exchange endpoint can stay blocked for 15+ minutes.
+_SSO_RETRY_DELAYS = [300, 600, 900, 1200]   # 5 min, 10 min, 15 min, 20 min
+_API_RETRY_DELAYS = [300, 600, 900]          # 5 min, 10 min, 15 min
+
+# Exception types that indicate a transient Garmin-side block worth retrying.
+_GARMIN_TRANSIENT_ERRORS = (GarminConnectTooManyRequestsError, GarminConnectConnectionError)
 
 
 def _load_session_tokens() -> str:
@@ -284,8 +288,8 @@ def _create_garmin_client() -> Garmin:
             client = Garmin(GARMIN_EMAIL, GARMIN_PASSWORD)
             client.login()
             return client
-        except GarminConnectTooManyRequestsError as exc:
-            print(f"SSO rate limited (attempt {attempt + 1}): {exc}")
+        except _GARMIN_TRANSIENT_ERRORS as exc:
+            print(f"SSO failed (attempt {attempt + 1}): {exc}")
             last_exc = exc
 
     raise last_exc  # type: ignore[misc]
@@ -310,8 +314,8 @@ def _get_activities_with_retry(client: Garmin, start: date, end: date) -> list:
                 start.strftime("%Y-%m-%d"),
                 end.strftime("%Y-%m-%d"),
             )
-        except GarminConnectTooManyRequestsError as exc:
-            print(f"Rate limited (attempt {attempt + 1}): {exc}")
+        except _GARMIN_TRANSIENT_ERRORS as exc:
+            print(f"Garmin request failed (attempt {attempt + 1}): {exc}")
             last_exc = exc
 
     raise last_exc  # type: ignore[misc]
