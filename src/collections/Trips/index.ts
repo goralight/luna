@@ -90,6 +90,7 @@ export const Trips: CollectionConfig = {
       name: 'images',
       type: 'array',
       minRows: 0,
+      maxRows: 8,
       fields: [
         {
           name: 'image',
