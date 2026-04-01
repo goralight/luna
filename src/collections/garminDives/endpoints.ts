@@ -5,6 +5,37 @@ import type { AdjacentDiveSummary } from './types'
 
 const GARMIN_DIVES_COLLECTION = 'garmin-dives'
 
+type DateTimePathOk = { ok: true; param: string; lookup: string }
+type DateTimePathErr = { ok: false; status: number; body: Record<string, string> }
+
+function parseByDateTimePathParam(req: Parameters<Endpoint['handler']>[0]): DateTimePathOk | DateTimePathErr {
+  const dateTimeFromPath =
+    (req as { routeParams?: { dateTime?: string }; params?: { dateTime?: string } })?.routeParams?.dateTime ??
+    (req as { params?: { dateTime?: string } })?.params?.dateTime ??
+    null
+  const param = typeof dateTimeFromPath === 'string' ? dateTimeFromPath.trim() : ''
+  if (param === '') {
+    return {
+      ok: false,
+      status: 400,
+      body: { error: 'Pass the date/time as YYYY-MM-DD_HH-MM at the end of the URL.' },
+    }
+  }
+
+  const match = param.match(/^(\d{4}-\d{2}-\d{2})_(\d{2})-(\d{2})$/)
+  if (!match) {
+    return {
+      ok: false,
+      status: 400,
+      body: { error: 'Invalid format. Use YYYY-MM-DD_HH-MM (example: 2025-12-24_10-22).' },
+    }
+  }
+
+  const [, datePart, hourPart, minutePart] = match
+  const lookup = `${datePart} ${hourPart}:${minutePart}`
+  return { ok: true, param, lookup }
+}
+
 export const garminDiveEndpoints: Endpoint[] = [
   {
     path: '/basic-stats',
@@ -164,34 +195,55 @@ export const garminDiveEndpoints: Endpoint[] = [
     },
   },
   {
-    path: '/by-date-time/:dateTime',
+    path: '/by-date-time/:dateTime/dive-time-series',
     method: 'get',
     handler: async (req) => {
-      const dateTimeFromPath =
-        (req as any)?.routeParams?.dateTime ?? (req as any)?.params?.dateTime ?? null
-      const param = typeof dateTimeFromPath === 'string' ? dateTimeFromPath.trim() : ''
-      if (param === '') {
-        return Response.json(
-          { error: 'Pass the date/time as YYYY-MM-DD_HH-MM at the end of the URL.' },
-          { status: 400 },
-        )
+      const parsed = parseByDateTimePathParam(req)
+      if (!parsed.ok) {
+        return Response.json(parsed.body, { status: parsed.status })
       }
-
-      const match = param.match(/^(\d{4}-\d{2}-\d{2})_(\d{2})-(\d{2})$/)
-      if (!match) {
-        return Response.json(
-          { error: 'Invalid format. Use YYYY-MM-DD_HH-MM (example: 2025-12-24_10-22).' },
-          { status: 400 },
-        )
-      }
-
-      const [, datePart, hourPart, minutePart] = match
-      const lookup = `${datePart} ${hourPart}:${minutePart}`
+      const { param, lookup } = parsed
 
       const result = await req.payload.find({
         collection: GARMIN_DIVES_COLLECTION,
         limit: 1,
         pagination: false,
+        select: { diveTimeSeries: true, startTimeLocal: true },
+        where: {
+          startTimeLocal: {
+            like: lookup,
+          },
+        },
+      })
+
+      const dive = result.docs?.[0] as GarminDive | undefined
+      if (!dive) {
+        return Response.json({ error: `No dive found for ${param}.` }, { status: 404 })
+      }
+
+      return Response.json({
+        startTimeLocal: dive.startTimeLocal,
+        diveTimeSeries: dive.diveTimeSeries ?? null,
+      })
+    },
+  },
+  {
+    path: '/by-date-time/:dateTime',
+    method: 'get',
+    handler: async (req) => {
+      const parsed = parseByDateTimePathParam(req)
+      if (!parsed.ok) {
+        return Response.json(parsed.body, { status: parsed.status })
+      }
+      const { param, lookup } = parsed
+
+      const result = await req.payload.find({
+        collection: GARMIN_DIVES_COLLECTION,
+        limit: 1,
+        pagination: false,
+        select: {
+          diveTimeSeries: false,
+        },
         where: {
           startTimeLocal: {
             like: lookup,
