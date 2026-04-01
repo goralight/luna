@@ -302,6 +302,15 @@ export const garminDiveFields: Field[] = [
     type: 'number',
   },
   {
+    name: 'diveTimeSeries',
+    type: 'json',
+    label: 'Dive time series (from FIT)',
+    admin: {
+      description:
+        'Columnar samples for charts: depth, temperature, SAC/RMV, tank pressure. Written by sync from Garmin FIT. See scripts/example-garmin-dive-db-document.json.',
+    },
+  },
+  {
     name: 'gases',
     type: 'array',
     label: 'Dive Gases',

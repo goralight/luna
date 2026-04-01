@@ -514,6 +514,18 @@ export interface GarminDive {
     max?: number | null;
   };
   surfaceIntervalSeconds?: number | null;
+  /**
+   * Columnar samples for charts: depth, temperature, SAC/RMV, tank pressure. Written by sync from Garmin FIT. See scripts/example-garmin-dive-db-document.json.
+   */
+  diveTimeSeries?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
   gases?:
     | {
         /**
@@ -948,6 +960,7 @@ export interface GarminDivesSelect<T extends boolean = true> {
         max?: T;
       };
   surfaceIntervalSeconds?: T;
+  diveTimeSeries?: T;
   gases?:
     | T
     | {
