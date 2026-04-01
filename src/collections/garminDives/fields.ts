@@ -44,7 +44,8 @@ export const garminDiveFields: Field[] = [
     admin: {
       condition: (_, siblingData) =>
         siblingData?.diveType === 'course' || siblingData?.diveType === 'instructing',
-      description: 'Select the course when logging training or instructing dives. Not ported from Garmin.',
+      description:
+        'Select the course when logging training or instructing dives. Not ported from Garmin.',
     },
   },
   {
@@ -107,9 +108,12 @@ export const garminDiveFields: Field[] = [
         admin: {
           condition: (_, siblingData: { selection?: string } | null | undefined) => {
             const selectedCylinder = siblingData?.selection
-            return selectedCylinder === '12l' || selectedCylinder === '15l' || selectedCylinder === '10l'
+            return (
+              selectedCylinder === '12l' || selectedCylinder === '15l' || selectedCylinder === '10l'
+            )
           },
-          description: 'Select the shape of the cylinder used for the dive. Not ported from Garmin.',
+          description:
+            'Select the shape of the cylinder used for the dive. Not ported from Garmin.',
         },
       },
     ],
@@ -132,7 +136,8 @@ export const garminDiveFields: Field[] = [
     name: 'cylinderPressure',
     label: 'Cylinder Pressure (bar)',
     admin: {
-      description: 'The pressure of the cylinder at the start and end of the dive. Not ported from Garmin.',
+      description:
+        'The pressure of the cylinder at the start and end of the dive. Not ported from Garmin.',
     },
     type: 'group',
     fields: [
@@ -302,15 +307,6 @@ export const garminDiveFields: Field[] = [
     type: 'number',
   },
   {
-    name: 'diveTimeSeries',
-    type: 'json',
-    label: 'Dive time series (from FIT)',
-    admin: {
-      description:
-        'Columnar samples for charts: depth, temperature, SAC/RMV, tank pressure. Written by sync from Garmin FIT. See scripts/example-garmin-dive-db-document.json.',
-    },
-  },
-  {
     name: 'gases',
     type: 'array',
     label: 'Dive Gases',
@@ -337,5 +333,13 @@ export const garminDiveFields: Field[] = [
       },
     ],
   },
+  {
+    name: 'diveTimeSeries',
+    type: 'json',
+    label: 'Dive time series (from FIT)',
+    admin: {
+      description:
+        'Columnar samples for charts: depth, temperature, SAC/RMV, tank pressure. Written by sync from Garmin FIT.',
+    },
+  },
 ]
-

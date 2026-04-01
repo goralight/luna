@@ -14,39 +14,45 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: |
-          python3 -m pip install --break-system-packages --upgrade pip
-          python3 -m pip install --break-system-packages garth garminconnect requests
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
 
-      # Restore the garth session written by the previous run.
-      # Falls back to the GARMIN_TOKENS secret on the first run or after cache eviction.
-      # The key changes each run so the cache is always updated; restore-keys matches
-      # the most recent entry by prefix.
-      - name: Restore Garmin session cache
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # garmin-connect OAuth files (oauth1_token.json + oauth2_token.json). Not the same format as
+      # Python GARMINTOKENS / Garth. Create once locally: log in with sync-garmin-dives-fit.js and
+      # GARMIN_TOKEN_DIR=./garmin-oauth node scripts/sync-garmin-dives-fit.js, then commit the
+      # folder to a private artifact or populate the cache from a backup.
+      - name: Restore Garmin Connect token cache
         uses: actions/cache/restore@v4
         with:
-          path: /tmp/garmin_session
-          key: garmin-session-${{ github.run_id }}
+          path: /tmp/garmin_connect_oauth
+          key: garmin-node-oauth-${{ github.run_id }}
           restore-keys: |
-            garmin-session-
+            garmin-node-oauth-
 
-      - name: Run Garmin dive sync
+      - name: Run Garmin dive sync (Node + FIT)
         env:
-          GARMINTOKENS: ${{ secrets.GARMIN_TOKENS }}
+          GARMIN_TOKEN_DIR: /tmp/garmin_connect_oauth
           GARMIN_EMAIL: ${{ secrets.GARMIN_EMAIL }}
           GARMIN_PASSWORD: ${{ secrets.GARMIN_PASSWORD }}
-          GARMIN_SESSION_FILE: /tmp/garmin_session
           PAYLOAD_URL: ${{ secrets.PAYLOAD_URL }}
           PAYLOAD_USER_EMAIL: ${{ secrets.PAYLOAD_USER_EMAIL }}
           PAYLOAD_USER_PASSWORD: ${{ secrets.PAYLOAD_USER_PASSWORD }}
-        run: |
-          python3 scripts/sync_garmin_dives.py
+        run: node scripts/sync-garmin-dives-fit.js
 
-      # Save the refreshed session so the next run can skip SSO/OAuth2 exchange.
-      - name: Save Garmin session cache
+      - name: Save Garmin Connect token cache
         if: success()
         uses: actions/cache/save@v4
         with:
-          path: /tmp/garmin_session
-          key: garmin-session-${{ github.run_id }}
+          path: /tmp/garmin_connect_oauth
+          key: garmin-node-oauth-${{ github.run_id }}

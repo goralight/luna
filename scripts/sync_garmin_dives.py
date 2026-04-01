@@ -21,6 +21,16 @@ PAYLOAD_USER_PASSWORD = os.getenv("PAYLOAD_USER_PASSWORD")
 _payload_token_cache: str | None = None
 
 
+def payload_api_base(url: str) -> str:
+    """REST lives under /api on Next.js (see scripts/payload-api-base.js). URL may be site origin or .../api."""
+    if not url:
+        return ""
+    base = url.rstrip("/")
+    if base.endswith("/api"):
+        return base
+    return f"{base}/api"
+
+
 def get_payload_token() -> str:
     """
     Logs into your Payload API and caches the JWT.
@@ -36,7 +46,7 @@ def get_payload_token() -> str:
         raise RuntimeError("PAYLOAD_URL must be set")
 
     resp = requests.post(
-        f"{PAYLOAD_URL}/users/login",
+        f"{payload_api_base(PAYLOAD_URL)}/users/login",
         headers={"Content-Type": "application/json"},
         data=json.dumps(
             {
@@ -68,7 +78,7 @@ def get_last_synced_start_time() -> str | None:
         raise RuntimeError("PAYLOAD_URL must be set")
 
     resp = requests.get(
-        f"{PAYLOAD_URL}/garmin-dives",
+        f"{payload_api_base(PAYLOAD_URL)}/garmin-dives",
         params={"limit": 1, "sort": "-startTimeGMT"},
         headers=payload_headers(),
         timeout=60,
@@ -202,7 +212,7 @@ def save_dive_to_payload(activity: dict) -> None:
         return
 
     resp = requests.post(
-        f"{PAYLOAD_URL}/garmin-dives",
+        f"{payload_api_base(PAYLOAD_URL)}/garmin-dives",
         headers=payload_headers(),
         data=json.dumps(data),
         timeout=60,
