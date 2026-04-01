@@ -4,7 +4,12 @@
  *
  * SAC/RMV/tank columns are null when the device did not log those FIT fields (common without a
  * tank transmitter). See `availability` on the returned object.
+ *
+ * Tank pressure: only `tankUpdateMesgs` with this ANT sensor id are used (ignores other pods).
  */
+
+/** Garmin tank transmitter id (uint32 from FIT `sensor`); change if you swap pods. */
+const TANK_PRESSURE_SENSOR_ID = 1162223324;
 
 /**
  * @param {unknown} ts
@@ -259,6 +264,8 @@ export function buildDiveTimeSeriesFromMessages(messages) {
       const up = /** @type {Record<string, unknown>} */ (u);
       const tms = fitTimestampToMs(up.timestamp);
       if (tms == null || up.pressure == null) continue;
+      const sid = up.sensor != null ? Number(up.sensor) : NaN;
+      if (!Number.isFinite(sid) || sid !== TANK_PRESSURE_SENSOR_ID) continue;
       const p = Number(up.pressure);
       if (!Number.isFinite(p)) continue;
       tankPressureSamples.push({
