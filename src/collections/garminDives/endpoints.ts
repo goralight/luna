@@ -36,6 +36,52 @@ function parseByDateTimePathParam(req: Parameters<Endpoint['handler']>[0]): Date
   return { ok: true, param, lookup }
 }
 
+/** Query ?series=… maps to diveTimeSeries JSON keys (columnar arrays). */
+const DIVE_TIME_SERIES_QUERY_TO_KEY = {
+  depth: 'depthM',
+  temperature: 'temperatureC',
+  tankPressure: 'tankPressureBar',
+  volumeSac: 'volumeSacLitersPerMin',
+} as const
+
+type DiveTimeSeriesSeriesQuery = keyof typeof DIVE_TIME_SERIES_QUERY_TO_KEY
+
+function parseDiveTimeSeriesSeriesQuery(req: Parameters<Endpoint['handler']>[0]): DiveTimeSeriesSeriesQuery | null | 'invalid' {
+  const raw = req.query?.series
+  const first = Array.isArray(raw) ? raw[0] : raw
+  if (typeof first !== 'string') return null
+  const trimmed = first.trim()
+  if (trimmed === '') return null
+  const lower = trimmed.toLowerCase()
+  const entries = Object.entries(DIVE_TIME_SERIES_QUERY_TO_KEY) as [DiveTimeSeriesSeriesQuery, string][]
+  const found = entries.find(([q]) => q.toLowerCase() === lower)
+  if (!found) return 'invalid'
+  return found[0]
+}
+
+function filterDiveTimeSeriesToSingleSeries(
+  full: Record<string, unknown>,
+  dataKey: string,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {}
+  for (const metaKey of ['schemaVersion', 'anchorTimeGmt', 'sampleCount'] as const) {
+    if (metaKey in full) out[metaKey] = full[metaKey]
+  }
+  if ('epochMs' in full) out.epochMs = full.epochMs
+  if (dataKey in full) out[dataKey] = full[dataKey]
+
+  const unitsFull = full.units
+  if (unitsFull && typeof unitsFull === 'object' && !Array.isArray(unitsFull)) {
+    const u = unitsFull as Record<string, unknown>
+    const filteredUnits: Record<string, unknown> = {}
+    if ('epochMs' in u) filteredUnits.epochMs = u.epochMs
+    if (dataKey in u) filteredUnits[dataKey] = u[dataKey]
+    if (Object.keys(filteredUnits).length > 0) out.units = filteredUnits
+  }
+
+  return out
+}
+
 export const garminDiveEndpoints: Endpoint[] = [
   {
     path: '/basic-stats',
@@ -221,9 +267,24 @@ export const garminDiveEndpoints: Endpoint[] = [
         return Response.json({ error: `No dive found for ${param}.` }, { status: 404 })
       }
 
+      const seriesQuery = parseDiveTimeSeriesSeriesQuery(req)
+      if (seriesQuery === 'invalid') {
+        const allowed = Object.keys(DIVE_TIME_SERIES_QUERY_TO_KEY).join(', ')
+        return Response.json(
+          { error: `Invalid series. Use one of: ${allowed}.` },
+          { status: 400 },
+        )
+      }
+
+      let diveTimeSeries: GarminDive['diveTimeSeries'] = dive.diveTimeSeries ?? null
+      if (seriesQuery !== null && diveTimeSeries !== null && typeof diveTimeSeries === 'object' && !Array.isArray(diveTimeSeries)) {
+        const dataKey = DIVE_TIME_SERIES_QUERY_TO_KEY[seriesQuery]
+        diveTimeSeries = filterDiveTimeSeriesToSingleSeries(diveTimeSeries as Record<string, unknown>, dataKey)
+      }
+
       return Response.json({
         startTimeLocal: dive.startTimeLocal,
-        diveTimeSeries: dive.diveTimeSeries ?? null,
+        diveTimeSeries,
       })
     },
   },
