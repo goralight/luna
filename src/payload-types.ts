@@ -76,6 +76,7 @@ export interface Config {
     trips: Trip;
     'day-entries': DayEntry;
     'garmin-dives': GarminDive;
+    'garmin-dive-time-series': GarminDiveTimeSery;
     search: Search;
     'payload-kv': PayloadKv;
     'payload-folders': FolderInterface;
@@ -98,6 +99,7 @@ export interface Config {
     trips: TripsSelect<false> | TripsSelect<true>;
     'day-entries': DayEntriesSelect<false> | DayEntriesSelect<true>;
     'garmin-dives': GarminDivesSelect<false> | GarminDivesSelect<true>;
+    'garmin-dive-time-series': GarminDiveTimeSeriesSelect<false> | GarminDiveTimeSeriesSelect<true>;
     search: SearchSelect<false> | SearchSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-folders': PayloadFoldersSelect<false> | PayloadFoldersSelect<true>;
@@ -464,7 +466,7 @@ export interface GarminDive {
    */
   redundantCylinder?: ('none' | '3l-pony' | '6l-pony') | null;
   /**
-   * The pressure of the cylinder at the start and end of the dive. Not ported from Garmin.
+   * Start/end pressure (bar). Filled from FIT when ingesting new dives via scripts/sync-garmin-dives-fit.js (configured tank sensor).
    */
   cylinderPressure?: {
     start?: number | null;
@@ -514,18 +516,6 @@ export interface GarminDive {
     max?: number | null;
   };
   surfaceIntervalSeconds?: number | null;
-  /**
-   * Columnar samples for charts: depth, temperature, SAC/RMV, tank pressure. Written by sync from Garmin FIT. See scripts/example-garmin-dive-db-document.json.
-   */
-  diveTimeSeries?:
-    | {
-        [k: string]: unknown;
-      }
-    | unknown[]
-    | string
-    | number
-    | boolean
-    | null;
   gases?:
     | {
         /**
@@ -538,6 +528,33 @@ export interface GarminDive {
         heliumPercent: number;
         id?: string | null;
       }[]
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Dive depth/temperature/SAC/tank samples from FIT. One row per Garmin activity; linked by garminActivityId.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "garmin-dive-time-series".
+ */
+export interface GarminDiveTimeSery {
+  id: string;
+  /**
+   * Same value as garmin-dives.garminActivityId for this dive.
+   */
+  garminActivityId: string;
+  /**
+   * Columnar samples for charts. Written by scripts/sync-garmin-dives-fit.js or backfill.
+   */
+  diveTimeSeries:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
     | null;
   updatedAt: string;
   createdAt: string;
@@ -627,6 +644,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'garmin-dives';
         value: string | GarminDive;
+      } | null)
+    | ({
+        relationTo: 'garmin-dive-time-series';
+        value: string | GarminDiveTimeSery;
       } | null)
     | ({
         relationTo: 'search';
@@ -960,7 +981,6 @@ export interface GarminDivesSelect<T extends boolean = true> {
         max?: T;
       };
   surfaceIntervalSeconds?: T;
-  diveTimeSeries?: T;
   gases?:
     | T
     | {
@@ -968,6 +988,16 @@ export interface GarminDivesSelect<T extends boolean = true> {
         heliumPercent?: T;
         id?: T;
       };
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "garmin-dive-time-series_select".
+ */
+export interface GarminDiveTimeSeriesSelect<T extends boolean = true> {
+  garminActivityId?: T;
+  diveTimeSeries?: T;
   updatedAt?: T;
   createdAt?: T;
 }

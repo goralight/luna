@@ -1,9 +1,13 @@
 import { isValid, parse } from 'date-fns'
 import { Endpoint, Where } from 'payload'
 import type { GarminDive } from '../../payload-types'
-import type { AdjacentDiveSummary } from './types'
+import { findDiveTimeSeriesByActivityId } from './loadDiveTimeSeries'
+import type { AdjacentDiveSummary, GarminDiveWithMergedTimeSeries } from './types'
 
 const GARMIN_DIVES_COLLECTION = 'garmin-dives'
+
+/** Skip `afterRead` merge of heavy `diveTimeSeries` for this find (local API / custom routes). */
+const omitDiveTimeSeriesMergeContext = { omitDiveTimeSeriesMerge: true as const }
 
 type DateTimePathOk = { ok: true; param: string; lookup: string }
 type DateTimePathErr = { ok: false; status: number; body: Record<string, string> }
@@ -254,7 +258,9 @@ export const garminDiveEndpoints: Endpoint[] = [
         collection: GARMIN_DIVES_COLLECTION,
         limit: 1,
         pagination: false,
-        select: { diveTimeSeries: true, startTimeLocal: true },
+        req,
+        context: omitDiveTimeSeriesMergeContext,
+        select: { garminActivityId: true, startTimeLocal: true },
         where: {
           startTimeLocal: {
             like: lookup,
@@ -263,7 +269,7 @@ export const garminDiveEndpoints: Endpoint[] = [
       })
 
       const dive = result.docs?.[0] as GarminDive | undefined
-      if (!dive) {
+      if (!dive?.garminActivityId) {
         return Response.json({ error: `No dive found for ${param}.` }, { status: 404 })
       }
 
@@ -276,7 +282,8 @@ export const garminDiveEndpoints: Endpoint[] = [
         )
       }
 
-      let diveTimeSeries: GarminDive['diveTimeSeries'] = dive.diveTimeSeries ?? null
+      const rawSeries = await findDiveTimeSeriesByActivityId(req.payload, String(dive.garminActivityId))
+      let diveTimeSeries: GarminDiveWithMergedTimeSeries['diveTimeSeries'] = rawSeries ?? null
       if (seriesQuery !== null && diveTimeSeries !== null && typeof diveTimeSeries === 'object' && !Array.isArray(diveTimeSeries)) {
         const dataKey = DIVE_TIME_SERIES_QUERY_TO_KEY[seriesQuery]
         diveTimeSeries = filterDiveTimeSeriesToSingleSeries(diveTimeSeries as Record<string, unknown>, dataKey)
@@ -302,9 +309,8 @@ export const garminDiveEndpoints: Endpoint[] = [
         collection: GARMIN_DIVES_COLLECTION,
         limit: 1,
         pagination: false,
-        select: {
-          diveTimeSeries: false,
-        },
+        req,
+        context: omitDiveTimeSeriesMergeContext,
         where: {
           startTimeLocal: {
             like: lookup,
@@ -328,6 +334,8 @@ export const garminDiveEndpoints: Endpoint[] = [
             collection: GARMIN_DIVES_COLLECTION,
             limit: 1,
             pagination: false,
+            req,
+            context: omitDiveTimeSeriesMergeContext,
             sort: 'startTimeLocal',
             where: {
               startTimeLocal: {
@@ -339,6 +347,8 @@ export const garminDiveEndpoints: Endpoint[] = [
             collection: GARMIN_DIVES_COLLECTION,
             limit: 1,
             pagination: false,
+            req,
+            context: omitDiveTimeSeriesMergeContext,
             sort: '-startTimeLocal',
             where: {
               startTimeLocal: {

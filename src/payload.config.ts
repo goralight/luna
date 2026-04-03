@@ -17,6 +17,7 @@ import { DayEntries } from './collections/DayEntry/index'
 import { Places } from './collections/Places'
 import { Trips } from './collections/Trips/index'
 import { Navigation } from './globals/Navigation'
+import { GarminDiveTimeSeries } from './collections/garminDiveTimeSeries/index'
 import { GarminDives } from './collections/garminDives/index'
 
 const filename = fileURLToPath(import.meta.url)
@@ -39,6 +40,7 @@ export default buildConfig({
     Trips,
     DayEntries,
     GarminDives,
+    GarminDiveTimeSeries,
   ],
   globals: [Navigation],
   editor: lexicalEditor(),

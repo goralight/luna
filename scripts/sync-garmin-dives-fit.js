@@ -2,8 +2,9 @@
  * Sync scuba dives from Garmin Connect into Payload, using FIT files (decoded via fit-to-json.js)
  * for depth, duration, gases, temperature, and chart time series — similar to scripts/sync_garmin_dives.py.
  *
- * Each dive POST includes `diveTimeSeries`: same data as `buildDiveTimeSeriesFromMessages` /
- * `scripts/time-series-from-decoded-json.js` (compact by default for Mongo + API size).
+ * Each dive POSTs metadata to `garmin-dives` and chart JSON to `garmin-dive-time-series` (same
+ * shape as `buildDiveTimeSeriesFromMessages` / compact by default). REST single-doc reads merge
+ * `diveTimeSeries` via Payload `afterRead`.
  *
  * Requires: PAYLOAD_URL (site origin or …/api), PAYLOAD_USER_EMAIL, PAYLOAD_USER_PASSWORD (or fill GARMIN_* below).
  *
@@ -23,6 +24,7 @@ import garminConnectPkg from 'garmin-connect';
 const { GarminConnect } = garminConnectPkg;
 import {
   buildDiveTimeSeriesFromMessages,
+  getCylinderPressureBarFromFitMessages,
   reduceDiveTimeSeries,
 } from './build-dive-time-series-from-fit.js';
 import { decodeFitFromBuffer } from './fit-to-json.js';
@@ -265,6 +267,8 @@ function transformDive(activity, messages) {
     buildDiveTimeSeriesFromMessages(messages),
   );
 
+  const cylinderPressure = getCylinderPressureBarFromFitMessages(messages);
+
   return {
     garminActivityId: String(activity.activityId),
     title: activity.activityName,
@@ -280,6 +284,10 @@ function transformDive(activity, messages) {
     startTimeGMT: startGmt,
     diveType: 'recreational',
     diveTimeSeries,
+    ...(cylinderPressure &&
+    (cylinderPressure.start != null || cylinderPressure.end != null)
+      ? { cylinderPressure }
+      : {}),
   };
 }
 
@@ -308,8 +316,80 @@ async function downloadActivityZip(gc, activityId) {
   });
 }
 
+const GARMIN_DIVE_TIME_SERIES_SLUG = 'garmin-dive-time-series';
+
 /**
- * @param {Record<string, unknown>} payload
+ * @param {Record<string, string>} headers
+ * @param {string} garminActivityId
+ * @param {Record<string, unknown> | null | undefined} diveTimeSeries
+ */
+async function upsertDiveTimeSeriesSidecar(headers, garminActivityId, diveTimeSeries) {
+  if (
+    diveTimeSeries == null ||
+    (typeof diveTimeSeries === 'object' &&
+      !Array.isArray(diveTimeSeries) &&
+      Object.keys(diveTimeSeries).length === 0)
+  ) {
+    return;
+  }
+  const apiBase = getPayloadApiBase(PAYLOAD_URL);
+  const listUrl = `${apiBase}/${GARMIN_DIVE_TIME_SERIES_SLUG}?where[garminActivityId][equals]=${encodeURIComponent(
+    garminActivityId,
+  )}&limit=1&depth=0`;
+  const listResp = await fetch(listUrl, { headers });
+  if (!listResp.ok) {
+    throw new Error(
+      `List ${GARMIN_DIVE_TIME_SERIES_SLUG} failed: ${listResp.status} ${await listResp.text()}`,
+    );
+  }
+  const listData = await listResp.json();
+  const existing = listData.docs?.[0];
+  if (existing?.id) {
+    const patchResp = await fetch(`${apiBase}/${GARMIN_DIVE_TIME_SERIES_SLUG}/${existing.id}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ diveTimeSeries }),
+    });
+    if (!patchResp.ok) {
+      throw new Error(
+        `PATCH ${GARMIN_DIVE_TIME_SERIES_SLUG} failed: ${patchResp.status} ${await patchResp.text()}`,
+      );
+    }
+    return;
+  }
+  const postResp = await fetch(`${apiBase}/${GARMIN_DIVE_TIME_SERIES_SLUG}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ garminActivityId, diveTimeSeries }),
+  });
+  if (postResp.ok || postResp.status === 201) return;
+  const postText = await postResp.text();
+  if (postResp.status === 400 && postText.includes('unique')) {
+    const retry = await fetch(listUrl, { headers });
+    if (!retry.ok) {
+      throw new Error(`List after duplicate failed: ${retry.status} ${await retry.text()}`);
+    }
+    const retryData = await retry.json();
+    const id = retryData.docs?.[0]?.id;
+    if (id) {
+      const patchResp = await fetch(`${apiBase}/${GARMIN_DIVE_TIME_SERIES_SLUG}/${id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ diveTimeSeries }),
+      });
+      if (!patchResp.ok) {
+        throw new Error(
+          `PATCH after race failed: ${patchResp.status} ${await patchResp.text()}`,
+        );
+      }
+      return;
+    }
+  }
+  throw new Error(`POST ${GARMIN_DIVE_TIME_SERIES_SLUG} failed: ${postResp.status} ${postText}`);
+}
+
+/**
+ * @param {Record<string, unknown>} payload - must not include diveTimeSeries (sidecar collection)
  */
 async function saveDiveToPayload(payload) {
   const apiBase = getPayloadApiBase(PAYLOAD_URL);
@@ -414,7 +494,14 @@ async function main() {
     const data = transformDive(act, messages);
     if (!data) continue;
 
-    await saveDiveToPayload(data);
+    const { diveTimeSeries, ...divePayload } = data;
+    await saveDiveToPayload(divePayload);
+    try {
+      const headers = await payloadHeaders();
+      await upsertDiveTimeSeriesSidecar(headers, data.garminActivityId, diveTimeSeries);
+    } catch (e) {
+      console.warn(`Sidecar time series failed for ${data.garminActivityId}:`, e);
+    }
     console.log('Saved dive', data.garminActivityId, data.title ?? '');
   }
 

@@ -12,6 +12,63 @@
 const TANK_PRESSURE_SENSOR_ID = 1162223324;
 
 /**
+ * @param {number} n
+ */
+function roundBar(n) {
+  return Math.round(n * 10) / 10;
+}
+
+/**
+ * Start/end cylinder pressure (bar) for {@link TANK_PRESSURE_SENSOR_ID}: prefers `tankSummaryMesgs`,
+ * otherwise first and last pressure in `tankUpdateMesgs` for that sensor.
+ *
+ * @param {Record<string, unknown>} messages - decoder.read().messages
+ * @returns {{ start?: number; end?: number } | null}
+ */
+export function getCylinderPressureBarFromFitMessages(messages) {
+  const id = TANK_PRESSURE_SENSOR_ID;
+  const summaries = messages.tankSummaryMesgs;
+  if (Array.isArray(summaries)) {
+    for (const s of summaries) {
+      if (!s || typeof s !== 'object') continue;
+      const row = /** @type {Record<string, unknown>} */ (s);
+      const sid = row.sensor != null ? Number(row.sensor) : NaN;
+      if (!Number.isFinite(sid) || sid !== id) continue;
+      const sp = row.startPressure != null ? Number(row.startPressure) : NaN;
+      const ep = row.endPressure != null ? Number(row.endPressure) : NaN;
+      const hasStart = Number.isFinite(sp) && sp > 0;
+      const hasEnd = Number.isFinite(ep);
+      if (hasStart || hasEnd) {
+        /** @type {{ start?: number; end?: number }} */
+        const out = {};
+        if (hasStart) out.start = roundBar(sp);
+        if (hasEnd) out.end = roundBar(ep);
+        return Object.keys(out).length ? out : null;
+      }
+    }
+  }
+
+  const tankUpdates = messages.tankUpdateMesgs;
+  if (!Array.isArray(tankUpdates) || tankUpdates.length === 0) {
+    return null;
+  }
+  const pressures = [];
+  for (const u of tankUpdates) {
+    if (!u || typeof u !== 'object') continue;
+    const up = /** @type {Record<string, unknown>} */ (u);
+    const sid = up.sensor != null ? Number(up.sensor) : NaN;
+    if (!Number.isFinite(sid) || sid !== id) continue;
+    const p = up.pressure != null ? Number(up.pressure) : NaN;
+    if (Number.isFinite(p)) pressures.push(p);
+  }
+  if (pressures.length === 0) return null;
+  return {
+    start: roundBar(pressures[0]),
+    end: roundBar(pressures[pressures.length - 1]),
+  };
+}
+
+/**
  * @param {unknown} ts
  * @returns {number | null} epoch ms
  */

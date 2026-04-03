@@ -1,6 +1,7 @@
 import { CollectionConfig } from 'payload'
 import { garminDiveEndpoints } from './endpoints'
 import { garminDiveFields } from './fields'
+import { findDiveTimeSeriesByActivityId } from './loadDiveTimeSeries'
 
 export const GarminDives: CollectionConfig = {
   slug: 'garmin-dives',
@@ -25,6 +26,9 @@ export const GarminDives: CollectionConfig = {
   hooks: {
     beforeValidate: [
       ({ data, originalDoc }) => {
+        if (data && typeof data === 'object' && 'diveTimeSeries' in data) {
+          delete (data as Record<string, unknown>).diveTimeSeries
+        }
         const diveType = (data?.diveType as string | undefined) ?? (originalDoc?.diveType as string | undefined)
         if (diveType === 'recreational' && data) {
           const mutableData = data as Record<string, unknown>
@@ -32,14 +36,32 @@ export const GarminDives: CollectionConfig = {
         }
       },
     ],
-    afterRead: [
-      ({ doc }) => {
-        if ((doc?.diveType as string | undefined) === 'recreational') {
-          const mutableDoc = doc as Record<string, unknown>
-          delete mutableDoc.diveCourse
-          return mutableDoc
+    beforeChange: [
+      ({ data }) => {
+        if (data && typeof data === 'object' && 'diveTimeSeries' in data) {
+          delete (data as Record<string, unknown>).diveTimeSeries
         }
-        return doc
+      },
+    ],
+    afterRead: [
+      async ({ doc, findMany, req }) => {
+        let next = doc as Record<string, unknown>
+        if ((next?.diveType as string | undefined) === 'recreational') {
+          next = { ...next }
+          delete next.diveCourse
+        }
+        if (
+          !findMany &&
+          !req.context?.omitDiveTimeSeriesMerge &&
+          next?.garminActivityId != null &&
+          String(next.garminActivityId).trim() !== ''
+        ) {
+          const series = await findDiveTimeSeriesByActivityId(req.payload, String(next.garminActivityId))
+          if (series != null) {
+            next = { ...next, diveTimeSeries: series }
+          }
+        }
+        return next
       },
     ],
   },

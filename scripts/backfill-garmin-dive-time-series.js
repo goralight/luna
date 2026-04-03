@@ -1,9 +1,9 @@
 /**
- * Backfill `diveTimeSeries` on existing Payload garmin-dives documents.
+ * Backfill `garmin-dive-time-series` sidecar rows from Garmin FIT (per garmin-dives document).
  *
  * For each dive: downloads the activity FIT from Garmin (by garminActivityId), builds the same
- * time series as sync-garmin-dives-fit.js, then PATCHes only `diveTimeSeries` — no other fields
- * are sent, so Payload merges this single key onto the existing document.
+ * time series as sync-garmin-dives-fit.js, then PATCHes (or POSTs) the `garmin-dive-time-series`
+ * sidecar for that `garminActivityId`. Main `garmin-dives` documents are not modified.
  *
  * Env (same as sync):
  *   PAYLOAD_URL — site origin (https://example.com) or API root (https://example.com/api)
@@ -17,7 +17,7 @@
  * CLI:
  *   node scripts/backfill-garmin-dive-time-series.js
  *   node scripts/backfill-garmin-dive-time-series.js --dry-run
- *   node scripts/backfill-garmin-dive-time-series.js --force   # overwrite existing diveTimeSeries
+ *   node scripts/backfill-garmin-dive-time-series.js --force   # overwrite existing sidecar row
  */
 
 import AdmZip from 'adm-zip'
@@ -31,14 +31,15 @@ import {
 import { decodeFitFromBuffer } from './fit-to-json.js'
 import { getPayloadApiBase } from './payload-api-base.js'
 
-const GARMIN_EMAIL = 'goralight@gmail.com'
-const GARMIN_PASSWORD = '@Fo2fc*6v65K#c'
+const GARMIN_EMAIL = ''
+const GARMIN_PASSWORD = ''
 
-const PAYLOAD_URL = (process.env.PAYLOAD_URL ?? 'https://luna.goralight.com').replace(/\/$/, '')
-const PAYLOAD_USER_EMAIL = process.env.PAYLOAD_USER_EMAIL ?? 'me@goralight.com'
-const PAYLOAD_USER_PASSWORD = process.env.PAYLOAD_USER_PASSWORD ?? 'zhpF#G32rgsK!Xp^'
+const PAYLOAD_URL = (process.env.PAYLOAD_URL ?? '').replace(/\/$/, '')
+const PAYLOAD_USER_EMAIL = process.env.PAYLOAD_USER_EMAIL ?? ''
+const PAYLOAD_USER_PASSWORD = process.env.PAYLOAD_USER_PASSWORD ?? ''
 
-const COLLECTION_SLUG = 'garmin-dives'
+const DIVE_COLLECTION_SLUG = 'garmin-dives'
+const TIME_SERIES_SLUG = 'garmin-dive-time-series'
 const PAGE_LIMIT = 50
 const GARMIN_REQUEST_GAP_MS = 600
 
@@ -139,14 +140,14 @@ async function fetchAllGarminDiveDocs(headers) {
   let page = 1
   let hasNext = true
   while (hasNext) {
-    const url = new URL(`${apiBase}/${COLLECTION_SLUG}`)
+    const url = new URL(`${apiBase}/${DIVE_COLLECTION_SLUG}`)
     url.searchParams.set('limit', String(PAGE_LIMIT))
     url.searchParams.set('page', String(page))
     url.searchParams.set('depth', '0')
 
     const resp = await fetch(url.toString(), { headers })
     if (!resp.ok) {
-      throw new Error(`List ${COLLECTION_SLUG} failed: ${resp.status} ${await resp.text()}`)
+      throw new Error(`List ${DIVE_COLLECTION_SLUG} failed: ${resp.status} ${await resp.text()}`)
     }
     const data = await resp.json()
     const batch = data.docs ?? []
@@ -159,20 +160,55 @@ async function fetchAllGarminDiveDocs(headers) {
 
 /**
  * @param {Record<string, unknown>} headers
- * @param {string} id
+ * @param {string} garminActivityId
  * @param {unknown} diveTimeSeries
  */
-async function patchDiveTimeSeriesOnly(headers, id, diveTimeSeries) {
+async function upsertDiveTimeSeriesSidecar(headers, garminActivityId, diveTimeSeries) {
   const apiBase = getPayloadApiBase(PAYLOAD_URL)
-  const resp = await fetch(`${apiBase}/${COLLECTION_SLUG}/${id}`, {
-    method: 'PATCH',
-    headers,
-    body: JSON.stringify({ diveTimeSeries }),
-  })
-  if (!resp.ok) {
-    const text = await resp.text()
-    throw new Error(`PATCH ${id} failed: ${resp.status} ${text}`)
+  const listUrl = `${apiBase}/${TIME_SERIES_SLUG}?where[garminActivityId][equals]=${encodeURIComponent(
+    garminActivityId,
+  )}&limit=1&depth=0`
+  const listResp = await fetch(listUrl, { headers })
+  if (!listResp.ok) {
+    throw new Error(`List ${TIME_SERIES_SLUG} failed: ${listResp.status} ${await listResp.text()}`)
   }
+  const listData = await listResp.json()
+  const existing = listData.docs?.[0]
+  if (existing?.id) {
+    const patchResp = await fetch(`${apiBase}/${TIME_SERIES_SLUG}/${existing.id}`, {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({ diveTimeSeries }),
+    })
+    if (!patchResp.ok) {
+      throw new Error(`PATCH ${TIME_SERIES_SLUG} failed: ${patchResp.status} ${await patchResp.text()}`)
+    }
+    return
+  }
+  const postResp = await fetch(`${apiBase}/${TIME_SERIES_SLUG}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ garminActivityId, diveTimeSeries }),
+  })
+  if (postResp.ok || postResp.status === 201) return
+  const postText = await postResp.text()
+  if (postResp.status === 400 && postText.includes('unique')) {
+    const retry = await fetch(listUrl, { headers })
+    const retryData = await retry.json()
+    const id = retryData.docs?.[0]?.id
+    if (id) {
+      const patchResp = await fetch(`${apiBase}/${TIME_SERIES_SLUG}/${id}`, {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({ diveTimeSeries }),
+      })
+      if (!patchResp.ok) {
+        throw new Error(`PATCH after race failed: ${patchResp.status} ${await patchResp.text()}`)
+      }
+      return
+    }
+  }
+  throw new Error(`POST ${TIME_SERIES_SLUG} failed: ${postResp.status} ${postText}`)
 }
 
 function parseFlags(argv) {
@@ -197,14 +233,14 @@ async function main() {
   }
 
   console.log(
-    dryRun ? 'Dry run — no PATCH requests will be sent.' : 'Live run — will PATCH diveTimeSeries.',
+    dryRun
+      ? 'Dry run — no writes.'
+      : `Live run — will upsert ${TIME_SERIES_SLUG} rows.`,
   )
 
   const headers = await payloadHeaders()
-  console.log('headers', headers)
   const docs = await fetchAllGarminDiveDocs(headers)
-  console.log('docs', docs)
-  console.log(`Found ${docs.length} documents in ${COLLECTION_SLUG}`)
+  console.log(`Found ${docs.length} documents in ${DIVE_COLLECTION_SLUG}`)
 
   const gc = new GarminConnect({ username: email, password })
   await gc.login()
@@ -222,17 +258,24 @@ async function main() {
       continue
     }
 
-    const hasSeries =
-      doc.diveTimeSeries != null &&
-      typeof doc.diveTimeSeries === 'object' &&
-      Object.keys(doc.diveTimeSeries).length > 0
+    if (!force) {
+      const apiBase = getPayloadApiBase(PAYLOAD_URL)
+      const url = `${apiBase}/${TIME_SERIES_SLUG}?where[garminActivityId][equals]=${encodeURIComponent(String(garminActivityId))}&limit=1&depth=0`
+      const r = await fetch(url, { headers })
+      const d = r.ok ? await r.json() : { docs: [] }
+      const row = d.docs?.[0]
+      const hasSidecar =
+        row?.diveTimeSeries != null &&
+        typeof row.diveTimeSeries === 'object' &&
+        Object.keys(row.diveTimeSeries).length > 0
 
-    if (hasSeries && !force) {
-      console.log(
-        `Skip ${id} (garmin ${garminActivityId}) — already has diveTimeSeries. Use --force to replace.`,
-      )
-      skipped++
-      continue
+      if (hasSidecar) {
+        console.log(
+          `Skip ${id} (garmin ${garminActivityId}) — sidecar already exists. Use --force to replace.`,
+        )
+        skipped++
+        continue
+      }
     }
 
     const activityId = Number(garminActivityId)
@@ -279,20 +322,20 @@ async function main() {
 
     if (dryRun) {
       console.log(
-        `[dry-run] would PATCH ${id} garminActivityId=${garminActivityId} sampleCount=${diveTimeSeries?.sampleCount}`,
+        `[dry-run] would upsert ${TIME_SERIES_SLUG} garminActivityId=${garminActivityId} sampleCount=${diveTimeSeries?.sampleCount}`,
       )
       updated++
       continue
     }
 
     try {
-      await patchDiveTimeSeriesOnly(headers, id, diveTimeSeries)
+      await upsertDiveTimeSeriesSidecar(headers, String(garminActivityId), diveTimeSeries)
       console.log(
-        `Updated ${id} garminActivityId=${garminActivityId} sampleCount=${diveTimeSeries?.sampleCount}`,
+        `Updated sidecar garminActivityId=${garminActivityId} sampleCount=${diveTimeSeries?.sampleCount}`,
       )
       updated++
     } catch (e) {
-      console.error(`PATCH failed for ${id}:`, e)
+      console.error(`Sidecar upsert failed for ${id}:`, e)
       failed++
     }
   }

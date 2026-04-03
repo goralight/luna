@@ -137,7 +137,7 @@ export const garminDiveFields: Field[] = [
     label: 'Cylinder Pressure (bar)',
     admin: {
       description:
-        'The pressure of the cylinder at the start and end of the dive. Not ported from Garmin.',
+        'Start/end pressure (bar). Filled from FIT when ingesting new dives via scripts/sync-garmin-dives-fit.js (configured tank sensor).',
     },
     type: 'group',
     fields: [
@@ -332,14 +332,5 @@ export const garminDiveFields: Field[] = [
         },
       },
     ],
-  },
-  {
-    name: 'diveTimeSeries',
-    type: 'json',
-    label: 'Dive time series (from FIT)',
-    admin: {
-      description:
-        'Columnar samples for charts: depth, temperature, SAC/RMV, tank pressure. Written by sync from Garmin FIT.',
-    },
   },
 ]
